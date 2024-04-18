@@ -83,9 +83,10 @@ void DirectX12Game::LoadPipeline() {
 	my_FrameCount = my_SwapChain->GetCurrentBackBufferIndex();
 
 	D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDescriptor = {};
+	rtvHeapDescriptor.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
 	rtvHeapDescriptor.NumDescriptors = FrameCount;
 	rtvHeapDescriptor.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-	rtvHeapDescriptor.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+	rtvHeapDescriptor.NodeMask = 0;
 	my_Device->CreateDescriptorHeap(&rtvHeapDescriptor, IID_PPV_ARGS(&my_rtvHeap));
 	my_rtvDescriptorSize = my_Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
@@ -152,10 +153,10 @@ void DirectX12Game::LoadAssets() {
 	Vertex triangleVertices[] = {
 		{ { 0.0f, 0.25f * Coefficient, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
 		{ { 0.25f, -0.25f * Coefficient, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
-		{ { 0.0f, -0.25f * Coefficient, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } }
+		{ { -0.25f, -0.25f * Coefficient, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } }
 	};
 
-	const UINT vertexBufferSize = 4 * sizeof(triangleVertices);
+	const UINT vertexBufferSize = sizeof(triangleVertices);
 
 	CD3DX12_HEAP_PROPERTIES heapProperties = {};
 	heapProperties.Type = D3D12_HEAP_TYPE_UPLOAD;
@@ -171,8 +172,8 @@ void DirectX12Game::LoadAssets() {
 	my_vertexBuffer->Unmap(0, nullptr);
 
 	my_vertexBufferView.BufferLocation = my_vertexBuffer->GetGPUVirtualAddress();
-	my_vertexBufferView.SizeInBytes = sizeof(Vertex);
-	my_vertexBufferView.StrideInBytes = vertexBufferSize;
+	my_vertexBufferView.SizeInBytes = vertexBufferSize;
+	my_vertexBufferView.StrideInBytes = sizeof(Vertex);
 
 	my_Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&my_fence));
 	my_fenceValue = 1;
