@@ -6,7 +6,7 @@ InterfaceDirectX::InterfaceDirectX(UINT WindowWidth, UINT WindowHeight, wstring 
 	new_WindowName(WindowName),
 	useWarpDevice(false) 
 {
-	WCHAR assetsPath[512]{ L"D:\\Microsoft Visual Studio\\Visual Studio 2022\\DirectX12 Engine\\Engine\\System\\Shaders\\" };
+	WCHAR assetsPath[512]{ L"D:\\Microsoft Visual Studio\\Visual Studio 2022\\DirectX12Engine\\Engine\\System\\Shaders\\" };
 	my_assetsPath = assetsPath;
 	Coefficient = static_cast<float>(WindowWidth) / static_cast<float>(WindowHeight);
 }
