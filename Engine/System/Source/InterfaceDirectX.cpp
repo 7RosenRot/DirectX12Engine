@@ -1,13 +1,14 @@
 #include "InterfaceDirectX.h"
 
 InterfaceDirectX::InterfaceDirectX(UINT WindowWidth, UINT WindowHeight, wstring WindowName):
-	new_WindowWidth(WindowWidth),
-	new_WindowHeight(WindowHeight),
-	new_WindowName(WindowName),
+	m_WindowWidth(WindowWidth),
+	m_WindowHeight(WindowHeight),
+	m_WindowName(WindowName),
 	useWarpDevice(false) 
 {
-	WCHAR assetsPath[512]{ L"D:\\Microsoft Visual Studio\\Visual Studio 2022\\DirectX12Engine\\Engine\\System\\Shaders\\" };
-	my_assetsPath = assetsPath;
+	string assetsPath = filesystem::current_path().string();
+	wstring buffer(assetsPath.begin(), assetsPath.end());
+	m_assetsPath = buffer;
 	Coefficient = static_cast<float>(WindowWidth) / static_cast<float>(WindowHeight);
 }
 
@@ -15,7 +16,7 @@ InterfaceDirectX::~InterfaceDirectX() {}
 
 _Use_decl_annotations_
 wstring InterfaceDirectX::GetAssetsFullPath(LPCWSTR assetName) {
-	return my_assetsPath + assetName;
+	return m_assetsPath + L"\\System\\Shaders\\" + assetName;
 }
 
 void InterfaceDirectX::GetHardwareAdapter(_In_ IDXGIFactory1* pFactory, _Outptr_opt_result_maybenull_ IDXGIAdapter1** ppAdapter, bool requestHightPerfomanceAdapter) {
