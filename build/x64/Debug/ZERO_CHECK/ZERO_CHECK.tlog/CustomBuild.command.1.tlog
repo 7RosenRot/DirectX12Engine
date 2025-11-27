@@ -1,0 +1,10 @@
+^D:\MICROSOFT VISUAL STUDIO\VISUAL STUDIO CODE\DIRECTX12ENGINE\BUILD\CMAKEFILES\007B169E3C2A30095F7BDB55AF400679\GENERATE.STAMP.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" "-SD:/Microsoft Visual Studio/Visual Studio Code/DirectX12Engine" "-BD:/Microsoft Visual Studio/Visual Studio Code/DirectX12Engine/build" --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file "D:/Microsoft Visual Studio/Visual Studio Code/DirectX12Engine/build/DirectX12Engine.sln"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
