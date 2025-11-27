@@ -1,3 +1,0 @@
-D:/Microsoft Visual Studio/Visual Studio Code/DirectX12Engine/build/CMakeFiles/DirectX12Engine.dir
-D:/Microsoft Visual Studio/Visual Studio Code/DirectX12Engine/build/CMakeFiles/ALL_BUILD.dir
-D:/Microsoft Visual Studio/Visual Studio Code/DirectX12Engine/build/CMakeFiles/ZERO_CHECK.dir
