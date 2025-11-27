@@ -4,9 +4,6 @@
     <ClCompile Include="D:\Microsoft Visual Studio\Visual Studio Code\DirectX12Engine\Main Application\main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Microsoft Visual Studio\Visual Studio Code\DirectX12Engine\DX3D12Engine\Source\Game\Game.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="D:\Microsoft Visual Studio\Visual Studio Code\DirectX12Engine\DX3D12Engine\Source\Graphics\InterfaceDirectX12.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

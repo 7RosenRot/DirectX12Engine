@@ -353,7 +353,6 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="D:\Microsoft Visual Studio\Visual Studio Code\DirectX12Engine\Main Application\main.cpp" />
-    <ClCompile Include="D:\Microsoft Visual Studio\Visual Studio Code\DirectX12Engine\DX3D12Engine\Source\Game\Game.cpp" />
     <ClCompile Include="D:\Microsoft Visual Studio\Visual Studio Code\DirectX12Engine\DX3D12Engine\Source\Graphics\InterfaceDirectX12.cpp" />
     <ClCompile Include="D:\Microsoft Visual Studio\Visual Studio Code\DirectX12Engine\DX3D12Engine\Source\Window\Window.cpp" />
   </ItemGroup>

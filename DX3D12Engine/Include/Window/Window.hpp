@@ -9,7 +9,7 @@
 namespace D3D12Engine {
     class Window {
     public:
-        Window(InterfaceDirectX12* m_InterfaceDirectX12, HINSTANCE hInstance, int nCmdShow);
+        Window(InterfaceDirectX12* m_InterfaceDirectX12, HINSTANCE hInstance, int CmdShow);
         ~Window();
 
         static HWND GetHwnd() { return m_hwnd; };

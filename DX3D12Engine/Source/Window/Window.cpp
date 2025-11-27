@@ -17,7 +17,7 @@ LRESULT CALLBACK D3D12Engine::Window::WndProc(HWND hwnd, UINT msg, WPARAM wParam
     return 0;
 }
 
-D3D12Engine::Window::Window(InterfaceDirectX12* m_InterfaceDirectX12, HINSTANCE hInstance, int nCmdShow) {
+D3D12Engine::Window::Window(InterfaceDirectX12* m_InterfaceDirectX12, HINSTANCE hInstance, int CmdShow) {
     auto registerWindowClassFunction = []() {
         WNDCLASSEX wndClass{};
         
@@ -40,18 +40,18 @@ D3D12Engine::Window::Window(InterfaceDirectX12* m_InterfaceDirectX12, HINSTANCE 
     static const auto wndClassID = std::invoke(registerWindowClassFunction);
     if (!wndClassID) throw std::runtime_error("RegisterClassEX Failed!");
 
-    RECT wndRectangle{0, 0, 1280, 720};
-    AdjustWindowRect(&wndRectangle, WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU, false);
+    RECT WndRect{0, 0, static_cast<LONG>(m_InterfaceDirectX12->getWindowWidth()), static_cast<LONG>(m_InterfaceDirectX12->getWindowHeight())};
+    AdjustWindowRect(&WndRect, WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU, false);
 
     m_handle = CreateWindowEx(
         NULL,
         MAKEINTATOM(wndClassID),
-        L"WindowName",
+        m_InterfaceDirectX12->getWindowName(),
         WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU,
         CW_USEDEFAULT,
         CW_USEDEFAULT,
-        wndRectangle.right - wndRectangle.left,
-        wndRectangle.bottom - wndRectangle.top,
+        WndRect.right - WndRect.left,
+        WndRect.bottom - WndRect.top,
         NULL,
         NULL,
         hInstance,
@@ -61,6 +61,15 @@ D3D12Engine::Window::Window(InterfaceDirectX12* m_InterfaceDirectX12, HINSTANCE 
     if (!m_handle) throw std::runtime_error("m_handle Failed!");
 
     ShowWindow(static_cast<HWND>(m_handle), SW_SHOW);
+
+    MSG msg{};
+
+    while (msg.message != WM_QUIT) {
+        if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+        }
+    }
 }
 
 D3D12Engine::Window::~Window() {
