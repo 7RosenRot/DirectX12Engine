@@ -7,6 +7,16 @@ LRESULT CALLBACK D3D12Engine::Window::WndProc(HWND hwnd, UINT msg, WPARAM wParam
         SetWindowLongPtr(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(pCreateStruct->lpCreateParams));
         }
         break;
+    case WM_GETMINMAXINFO:
+        {
+            // lParam содержит указатель на структуру MINMAXINFO
+            LPMINMAXINFO lpMMI = (LPMINMAXINFO)lParam;
+
+            // Устанавливаем минимальную ширину и высоту окна
+            lpMMI->ptMinTrackSize.x = MIN_WINDOW_WIDTH;
+            lpMMI->ptMinTrackSize.y = MIN_WINDOW_HEIGHT;
+        }
+        return 0;
     case WM_DESTROY:
         PostQuitMessage(0);
         break;
@@ -29,7 +39,7 @@ D3D12Engine::Window::Window(InterfaceDirectX12* m_InterfaceDirectX12, HINSTANCE 
         wndClass.hbrBackground = (HBRUSH)COLOR_WINDOW;
         wndClass.hIcon = LoadIcon(NULL, IDI_APPLICATION);
         wndClass.hIconSm = LoadIcon(NULL, IDI_APPLICATION);
-        wndClass.hCursor = LoadIcon(NULL, IDC_ARROW);
+        wndClass.hCursor = LoadCursor(NULL, IDC_ARROW);
         wndClass.hInstance = NULL;
 
         wndClass.lpfnWndProc = &WndProc;
@@ -41,13 +51,13 @@ D3D12Engine::Window::Window(InterfaceDirectX12* m_InterfaceDirectX12, HINSTANCE 
     if (!wndClassID) throw std::runtime_error("RegisterClassEX Failed!");
 
     RECT WndRect{0, 0, static_cast<LONG>(m_InterfaceDirectX12->getWindowWidth()), static_cast<LONG>(m_InterfaceDirectX12->getWindowHeight())};
-    AdjustWindowRect(&WndRect, WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU, false);
+    AdjustWindowRect(&WndRect, WS_OVERLAPPEDWINDOW, false);
 
     m_handle = CreateWindowEx(
         NULL,
         MAKEINTATOM(wndClassID),
         m_InterfaceDirectX12->getWindowName(),
-        WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU,
+        WS_OVERLAPPEDWINDOW,
         CW_USEDEFAULT,
         CW_USEDEFAULT,
         WndRect.right - WndRect.left,
@@ -60,16 +70,7 @@ D3D12Engine::Window::Window(InterfaceDirectX12* m_InterfaceDirectX12, HINSTANCE 
 
     if (!m_handle) throw std::runtime_error("m_handle Failed!");
 
-    ShowWindow(static_cast<HWND>(m_handle), SW_SHOW);
-
-    MSG msg{};
-
-    while (msg.message != WM_QUIT) {
-        if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
-        }
-    }
+    ShowWindow(static_cast<HWND>(m_handle), CmdShow);
 }
 
 D3D12Engine::Window::~Window() {
