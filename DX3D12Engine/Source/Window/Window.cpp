@@ -1,3 +1,6 @@
+#define UNICODE
+#define _UNICODE
+
 #include <Include/Window/Window.hpp>
 
 LRESULT CALLBACK D3D12Engine::Window::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
@@ -7,14 +10,11 @@ LRESULT CALLBACK D3D12Engine::Window::WndProc(HWND hwnd, UINT msg, WPARAM wParam
         SetWindowLongPtr(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(pCreateStruct->lpCreateParams));
         }
         break;
-    case WM_GETMINMAXINFO:
-        {
-            // lParam содержит указатель на структуру MINMAXINFO
-            LPMINMAXINFO lpMMI = (LPMINMAXINFO)lParam;
+    case WM_GETMINMAXINFO: {
+            LPMINMAXINFO setBorders = (LPMINMAXINFO)lParam;
 
-            // Устанавливаем минимальную ширину и высоту окна
-            lpMMI->ptMinTrackSize.x = MIN_WINDOW_WIDTH;
-            lpMMI->ptMinTrackSize.y = MIN_WINDOW_HEIGHT;
+            setBorders->ptMinTrackSize.x = min_WndWidth;
+            setBorders->ptMinTrackSize.y = min_WndHeight;
         }
         return 0;
     case WM_DESTROY:
@@ -27,7 +27,7 @@ LRESULT CALLBACK D3D12Engine::Window::WndProc(HWND hwnd, UINT msg, WPARAM wParam
     return 0;
 }
 
-D3D12Engine::Window::Window(InterfaceDirectX12* m_InterfaceDirectX12, HINSTANCE hInstance, int CmdShow) {
+D3D12Engine::Window::Window(InterfaceDirectX12* m_InterfaceDirectX12, HINSTANCE hInstance, int m_CmdShow) {
     auto registerWindowClassFunction = []() {
         WNDCLASSEX wndClass{};
         
@@ -67,10 +67,25 @@ D3D12Engine::Window::Window(InterfaceDirectX12* m_InterfaceDirectX12, HINSTANCE 
         hInstance,
         m_InterfaceDirectX12
     );
-
     if (!m_handle) throw std::runtime_error("m_handle Failed!");
 
-    ShowWindow(static_cast<HWND>(m_handle), CmdShow);
+    ShowWindow(static_cast<HWND>(m_handle), m_CmdShow);
+}
+
+void D3D12Engine::Window::run_GameLoop() {
+    MSG msg{};
+
+    while (m_isRunning) {
+        while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
+            if (msg.message == WM_QUIT) {
+                m_isRunning = false;
+
+                break;
+            }
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+        }
+    }
 }
 
 D3D12Engine::Window::~Window() {

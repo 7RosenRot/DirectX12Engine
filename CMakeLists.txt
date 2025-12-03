@@ -19,11 +19,13 @@ add_executable(DirectX12Engine
 )
 
 # -- include files -- #
-target_include_directories(DirectX12Engine PRIVATE
+target_include_directories(DirectX12Engine
+PRIVATE
     ${ENGINE_ROOT}
 )
 
 # -- link libaries -- #
-target_link_libraries(DirectX12Engine PRIVATE
+target_link_libraries(DirectX12Engine
+PRIVATE
     d3d12 dxgi d3dcompiler
 )
