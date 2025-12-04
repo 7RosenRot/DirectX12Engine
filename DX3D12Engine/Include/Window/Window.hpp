@@ -11,8 +11,6 @@ namespace D3D12Engine {
         virtual ~Window();
 
         virtual void run_GameLoop();
-
-        static HWND GetHwnd() { return m_hwnd; };
     protected:
         //Game loop parameter (as long as m_isRunning is "true" -> game loop still running)
         bool m_isRunning{true};
