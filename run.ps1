@@ -1,18 +1,13 @@
 $ErrorActionPreference = "Stop"
-
-Remove-Item -Recurse -Force "build"
-
-Write-Host ""
-Write-Host "-----------------> Set CMake Properties..."
-Write-Host ""
-cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo
+$ProjectName = "DIrectX12Engine"
+$BuildDir = "build"
 
 Write-Host ""
-Write-Host "-----------------> Assembling Project..."
+Write-Host "-----------------> Assembling Project $ProjectNam..."
 Write-Host ""
-cmake --build build --parallel
+cmake --build $BuildDir --parallel
 
 Write-Host ""
 Write-Host "-----------------> Executing..."
 Write-Host ""
-./build/Debug/DirectX12Engine.exe
+./$BuildDir/Debug/DirectX12Engine.exe
