@@ -4,6 +4,7 @@ project(DirectX12Engine LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # -- set paths -- #
 set(ENGINE_ROOT "${CMAKE_SOURCE_DIR}/DX3D12Engine")
@@ -27,5 +28,7 @@ PRIVATE
 # -- link libaries -- #
 target_link_libraries(DirectX12Engine
 PRIVATE
-    d3d12 dxgi d3dcompiler
+    d3d12
+    dxgi 
+    d3dcompiler
 )
