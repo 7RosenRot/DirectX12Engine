@@ -6,19 +6,27 @@
 #include <Include/Graphics/d3dx12.hpp>
 
 namespace D3D12Engine {
-    class InterfaceDirectX12 {
-    public:
-        InterfaceDirectX12(UINT WindowHeight, UINT WindowWidth, std::wstring WindowName);
-        virtual ~InterfaceDirectX12();
+  class InterfaceDirectX12 {
+  public:
+    InterfaceDirectX12(UINT m_WindowHeight, UINT m_WindowWidth, std::wstring m_WindowName);
+    virtual ~InterfaceDirectX12();
 
-        UINT getWindowHeight() { return m_WindowHeight; }
-        UINT getWindowWidth() { return m_WindowWidth; }
-        const WCHAR* getWindowName() { return m_WindowName.c_str(); }
+    virtual void OnInitialize() = 0;
+    virtual void OnRender() = 0;
+    virtual void OnUpdate() = 0;
+    virtual void OnDestroy() = 0;
 
-        void getHardwareAdapter(_In_ IDXGIFactory1* ptr_Factory1, _Outptr_opt_result_maybenull_ IDXGIAdapter1** ptr_Adapter1, bool requestHighPerfomanceAdapter);
+    UINT getWindowHeight() { return WindowHeight; }
+    UINT getWindowWidth() { return WindowWidth; }
+    const WCHAR* getWindowName() { return WindowName.c_str(); }
+
     protected:
-        std::wstring m_WindowName;
-        UINT m_WindowHeight;
-        UINT m_WindowWidth;
-    };
+    void getHardwareAdapter(_In_ IDXGIFactory1* ptr_Factory1, _Outptr_opt_result_maybenull_ IDXGIAdapter1** ptr_Adapter1, bool requestHighPerfomanceAdapter);
+    
+    std::wstring WindowName;
+    UINT WindowHeight;
+    UINT WindowWidth;
+
+    bool useWarpAdapter;
+  };
 }

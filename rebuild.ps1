@@ -3,7 +3,9 @@ $BuildType = "RelWithDebInfo"
 $ProjectName = "DIrectX12Engine"
 $BuildDir = "build"
 
-Remove-Item -Recurse -Force "build"
+if (Test-Path $BuildDir) {
+    rm -r $BuildDir
+}
 
 Write-Host ""
 Write-Host "-----------------> Set CMake Properties | Configuration: $BuildType, Build directory: $BuildDir..."
@@ -18,4 +20,4 @@ cmake --build $BuildDir --parallel
 Write-Host ""
 Write-Host "-----------------> Executing..."
 Write-Host ""
-./$BuildDir/Debug/DirectX12Engine.exe
+& "$BuildDir\Debug\DirectX12Engine.exe"
