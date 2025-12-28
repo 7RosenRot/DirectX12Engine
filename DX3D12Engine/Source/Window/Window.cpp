@@ -53,7 +53,7 @@ D3D12Engine::Window::Window(InterfaceDirectX12* m_InterfaceDirectX12, HINSTANCE 
   RECT WndRect{0, 0, static_cast<LONG>(m_InterfaceDirectX12->getWindowWidth()), static_cast<LONG>(m_InterfaceDirectX12->getWindowHeight())};
   AdjustWindowRect(&WndRect, WS_OVERLAPPEDWINDOW, false);
 
-  m_handle = CreateWindowEx(
+  handle = CreateWindowEx(
     NULL,
     MAKEINTATOM(wndClassID),
     m_InterfaceDirectX12->getWindowName(),
@@ -67,18 +67,18 @@ D3D12Engine::Window::Window(InterfaceDirectX12* m_InterfaceDirectX12, HINSTANCE 
     hInstance,
     m_InterfaceDirectX12
   );
-  if (!m_handle) throw std::runtime_error("m_handle Failed!");
+  if (!handle) throw std::runtime_error("m_handle Failed!");
 
-  ShowWindow(static_cast<HWND>(m_handle), m_CmdShow);
+  ShowWindow(static_cast<HWND>(handle), m_CmdShow);
 }
 
 void D3D12Engine::Window::run_GameLoop() {
   MSG msg{};
 
-  while (m_isRunning) {
+  while (isRunning) {
     while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
       if (msg.message == WM_QUIT) {
-        m_isRunning = false;
+        isRunning = false;
 
         break;
       }
@@ -89,5 +89,5 @@ void D3D12Engine::Window::run_GameLoop() {
 }
 
 D3D12Engine::Window::~Window() {
-  DestroyWindow(static_cast<HWND>(m_handle));
+  DestroyWindow(static_cast<HWND>(handle));
 }

@@ -20,7 +20,7 @@ namespace D3D12Engine {
     UINT getWindowWidth() { return WindowWidth; }
     const WCHAR* getWindowName() { return WindowName.c_str(); }
 
-    protected:
+  protected:
     void getHardwareAdapter(_In_ IDXGIFactory1* ptr_Factory1, _Outptr_opt_result_maybenull_ IDXGIAdapter1** ptr_Adapter1, bool requestHighPerfomanceAdapter);
     
     std::wstring WindowName;
