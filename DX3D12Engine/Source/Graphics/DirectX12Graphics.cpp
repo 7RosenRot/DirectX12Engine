@@ -1,15 +1,19 @@
 #include <Include/Graphics/DirectX12Graphics.hpp>
+#include <stdexcept>
 
-D3D12Engine::DirectX12Graphics::DirectX12Graphics(UINT m_WindowHeight, UINT m_WindowWidth, std::wstring m_WindowName) :
-  InterfaceDirectX12(m_WindowHeight, m_WindowWidth, m_WindowName)
+D3D12Engine::DirectX12Graphics::DirectX12Graphics(UINT WindowHeight, UINT WindowWidth, std::wstring WindowName) :
+  InterfaceDirectX12(WindowHeight, WindowWidth, WindowName)
   // Добавить соответсвующие поля, которые будут проинициализированы конструктором класса по умолчанию
 {}
 
 D3D12Engine::DirectX12Graphics::~DirectX12Graphics() {}
 
 void D3D12Engine::DirectX12Graphics::OnInitialize() {
-  LoadPipeline(); // Подготовливаем среду для работы
-  LoadAssets();   // Устанавливаем контракт между нашим кодом и шейдерами
+  // Подготовливаем среду для работы
+  if (FAILED(LoadPipeline())) throw std::runtime_error("Pipeline load failed");
+  
+  // Устанавливаем контракт между нашим кодом и шейдерами
+  if (FAILED(LoadAssets())) throw std::runtime_error("Assets load failed");
 }
 
 void D3D12Engine::DirectX12Graphics::OnRender() {
@@ -24,73 +28,79 @@ void D3D12Engine::DirectX12Graphics::OnDestroy() {
   // Дожидаемся отрисовки последнего кадра и завершаем конвейер
 }
 
-void D3D12Engine::DirectX12Graphics::LoadPipeline() {
+bool D3D12Engine::DirectX12Graphics::LoadPipeline() {
   UINT DXGIFactoryFlags{0};
-#if defined(_DEBUD)
+#if defined(_DEBUG)
   {
-    Microsoft::WRL::ComPtr<ID3DDebug> debugController;
-    if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_AGS(&debugController)))) {
-      debugController->EnablrDebugLayer();
+    Microsoft::WRL::ComPtr<ID3D12Debug> debugController;
+    if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController)))) {
+      debugController->EnableDebugLayer();
       DXGIFactoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
     }
   }
 #endif
-  Microsoft::WRL::ComPtr<IDXGIFactory4> m_Factory4;
-  CreateDXGIFactory2(DXGIFactoryFlags, IID_PPV_ARGS(&m_Factory4));
+  Microsoft::WRL::ComPtr<IDXGIFactory4> factory4;
+  CreateDXGIFactory2(DXGIFactoryFlags, IID_PPV_ARGS(&factory4));
 
-  if (useWarpAdapter) {
-    Microsoft::WRL::ComPtr<IDXGIAdapter> m_WarpAdapter;
-    m_Factory4->EnumWarpAdapter(IID_PPV_ARGS(&m_WarpAdapter));
-    D3D12CreateDevice(m_WarpAdapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&Device));
+  if (m_useWarpAdapter) {
+    Microsoft::WRL::ComPtr<IDXGIAdapter> warpAdapter;
+    
+    factory4->EnumWarpAdapter(IID_PPV_ARGS(&warpAdapter));
+    D3D12CreateDevice(warpAdapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_device));
   }
   else {
-    Microsoft::WRL::ComPtr<IDXGIAdapter1> m_HardwareAdapter;
-    getHardwareAdapter(m_Factory4.Get(), &m_HardwareAdapter, true);
-    D3D12CreateDevice(m_HardwareAdapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_HardwareAdapter));
+    Microsoft::WRL::ComPtr<IDXGIAdapter1> hardwareAdapter;
+    
+    getHardwareAdapter(factory4.Get(), &hardwareAdapter, true);
+    D3D12CreateDevice(hardwareAdapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_device));
   }
 
-  D3D12_COMMAND_QUEUE_DESC m_CommandQueueDescriptor{};
-  m_CommandQueueDescriptor.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-  m_CommandQueueDescriptor.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-  Device->CreateCommandQueue(&m_CommandQueueDescriptor, IID_PPV_ARGS(&Device));
+  D3D12_COMMAND_QUEUE_DESC cmdQueueDescriptor{};
+  cmdQueueDescriptor.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+  cmdQueueDescriptor.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+  m_device->CreateCommandQueue(&cmdQueueDescriptor, IID_PPV_ARGS(&m_cmdQueue));
 
-  DXGI_SWAP_CHAIN_DESC1 m_SwapChainDescriptor{};
-  m_SwapChainDescriptor.BufferCount = FrameCount;
-  m_SwapChainDescriptor.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-  m_SwapChainDescriptor.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
-  m_SwapChainDescriptor.SampleDesc.Count = 1;
-  m_SwapChainDescriptor.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-  m_SwapChainDescriptor.Height = WindowHeight;
-  m_SwapChainDescriptor.Width = WindowWidth;
+  DXGI_SWAP_CHAIN_DESC1 swapChainDescriptor{};
+  swapChainDescriptor.BufferCount = m_frameCount;
+  swapChainDescriptor.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+  swapChainDescriptor.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+  swapChainDescriptor.SampleDesc.Count = 1;
+  swapChainDescriptor.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+  swapChainDescriptor.Height = m_WindowHeight;
+  swapChainDescriptor.Width = m_WindowWidth;
 
-  Microsoft::WRL::ComPtr<IDXGISwapChain1> m_SwapChain;
-  m_Factory4->CreateSwapChainForHwnd(CommandQueue.Get(), D3D12Engine::Window::getHwnd(), &m_SwapChainDescriptor, nullptr, nullptr, &m_SwapChain);
+  Microsoft::WRL::ComPtr<IDXGISwapChain1> swapChain;
+  factory4->CreateSwapChainForHwnd(m_cmdQueue.Get(), D3D12Engine::Window::getHwnd(), &swapChainDescriptor, nullptr, nullptr, &swapChain);
 
-  m_Factory4->MakeWindowAssociation(D3D12Engine::Window::getHwnd(), DXGI_MWA_NO_ALT_ENTER);
+  factory4->MakeWindowAssociation(D3D12Engine::Window::getHwnd(), DXGI_MWA_NO_ALT_ENTER);
+  
+  swapChain.As(&m_swapChain);
+  m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 
-  m_SwapChain.As(&SwapChain);
-  FrameIndex = SwapChain->GetCurrentBackBufferIndex();
+  D3D12_DESCRIPTOR_HEAP_DESC rtvDescriptorHeap{};
+  rtvDescriptorHeap.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+  rtvDescriptorHeap.NodeMask = 0;
+  rtvDescriptorHeap.NumDescriptors = m_frameCount;
+  rtvDescriptorHeap.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
 
-  D3D12_DESCRIPTOR_HEAP_DESC m_RenderTargetViewHeapDescriptor{};
-  m_RenderTargetViewHeapDescriptor.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-  m_RenderTargetViewHeapDescriptor.NodeMask = 0;
-  m_RenderTargetViewHeapDescriptor.NumDescriptors = FrameCount;
-  m_RenderTargetViewHeapDescriptor.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+  m_device->CreateDescriptorHeap(&rtvDescriptorHeap, IID_PPV_ARGS(&m_rtvDescriptorHeap));
+  m_rtvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
-  Device->CreateDescriptorHeap(&m_RenderTargetViewHeapDescriptor, IID_PPV_ARGS(&RenderTargetViewHeapDescriptor));
-  RenderTargetViewDescriptorSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-
-  CD3DX12_CPU_DESCRIPTOR_HANDLE m_RenderTargetViewHandle(RenderTargetViewHeapDescriptor->GetCPUDescriptorHandleForHeapStart());
-  for (UINT Frame = 0; Frame < FrameCount; Frame += 1) {
-    SwapChain->GetBuffer(Frame, IID_PPV_ARGS(&RenderTargets[Frame]));
-    Device->CreateRenderTargetView(RenderTargets[Frame].Get(), nullptr, m_RenderTargetViewHandle);
-    m_RenderTargetViewHandle.Offset(1, RenderTargetViewDescriptorSize);
+  CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+  for (UINT frame = 0; frame < m_frameCount; frame += 1) {
+    m_swapChain->GetBuffer(frame, IID_PPV_ARGS(&m_renderTargets[frame]));
+    m_device->CreateRenderTargetView(m_renderTargets[frame].Get(), nullptr, rtvHandle);
+    rtvHandle.Offset(1, m_rtvDescriptorSize);
   }
 
-  Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&CommandAllocator));
+  m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_cmdAllocator));
+
+  return true;
 }
 
-void D3D12Engine::DirectX12Graphics::LoadAssets() {}
+bool D3D12Engine::DirectX12Graphics::LoadAssets() {
+  return true;
+}
 
 void D3D12Engine::DirectX12Graphics::FillCommandList() {}
 
