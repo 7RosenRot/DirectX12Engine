@@ -2,6 +2,11 @@
 #include <Include/Window/Window.hpp>
 #include <Include/Graphics/InterfaceDirectX12.hpp>
 
+#include <d3dcompiler.h>
+#include <DirectXMath.h>
+#include <exception>
+#include <stdexcept>
+
 namespace D3D12Engine {
   class DirectX12Graphics : public InterfaceDirectX12 {
   public:
@@ -18,6 +23,11 @@ namespace D3D12Engine {
     // DXGI (DirectX Graphics Infrastructure) - отвечает за общие вещи для всех версии DirectX: Окна, мониторы, форматы пикселей.
     // D3D12 - отвчеает только за отрисовку примитивов (треугольники, шейдеры, вычисления)
 
+    struct m_Vertex {
+      DirectX::XMFLOAT3 position;
+      DirectX::XMFLOAT4 color;
+    };
+
     static const UINT m_frameCount{2};                                    // Количесвто буферов отрисовки
     UINT m_frameIndex{0};                                                 // Индекс текущего буфера
     Microsoft::WRL::ComPtr<IDXGISwapChain3> m_swapChain;                  // Цепочка из буферов
@@ -31,10 +41,24 @@ namespace D3D12Engine {
     
     Microsoft::WRL::ComPtr<ID3D12CommandAllocator> m_cmdAllocator;        // Память для команд
 
+    Microsoft::WRL::ComPtr<ID3D12RootSignature> m_rootSignature;
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> m_pipelineState;
+    Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> m_cmdList;
+    
+    Microsoft::WRL::ComPtr<ID3D12Fence> m_fence;
+    UINT64 m_fenceValue;
+    HANDLE m_fenceEvent;
+    
+    Microsoft::WRL::ComPtr<ID3D12Resource> m_vertexBuffer;
+    D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
 
-    void LoadPipeline();
-    void LoadAssets();
-    void FillCommandList();
-    void WaitForPreviousFrame();
+    CD3DX12_RESOURCE_BARRIER m_transitionBarier{};
+    CD3DX12_VIEWPORT m_viewPort{};
+    CD3DX12_RECT m_scissorRect{};
+
+    void loadPipeline();
+    void loadAssets();
+    void fillCommandList();
+    void waitForPreviousFrame();
   };
 }

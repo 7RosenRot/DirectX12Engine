@@ -1,11 +1,20 @@
 #include <Include/Graphics/InterfaceDirectX12.hpp>
+#include <filesystem>
+#include <iostream>
 
 D3D12Engine::InterfaceDirectX12::InterfaceDirectX12(UINT WindowHeight, UINT WindowWidht, std::wstring WindowName) :
   m_WindowHeight(WindowHeight), 
   m_WindowWidth(WindowWidht),
   m_WindowName(WindowName)
-{}
+{
+  std::wstring assetPath = std::filesystem::current_path().wstring();
+  std::wstring buffer(assetPath.begin(), assetPath.end());
+  m_assetPath = buffer;
 
+  m_Coefficient = static_cast<float>(WindowWidht) / static_cast<float>(WindowHeight);
+}
+
+_Use_decl_annotations_
 // Входной параметр: ptr_Factory1 - список доступных графических адаптеров
 // Выходной параметр: ptr_Adapter1 - указатель на выбранный адаптер
 // Передаваемый параметр: requestHighPerfomanceAdpter - запрашивать высокопроизводительный (дискретный) адаптер?
