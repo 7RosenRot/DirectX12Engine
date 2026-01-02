@@ -31,6 +31,19 @@ void D3D12Engine::DirectX12Graphics::OnRender() {
 
 void D3D12Engine::DirectX12Graphics::OnUpdate() {
   // Обновляем кадр, сели встречено какое-то изменение
+  auto angle = getElapsedSeconds() * 2.F;
+  float startPosition = 0.25F * m_Coefficient;
+  
+  m_Vertex triangleVertices[] = {
+    { {        0.F,                                                              startPosition, 0.F }, { 1.F, 0.F, 0.F, 1.F } },
+    { {        startPosition * cosf(angle) + startPosition * sinf(angle), (-1) * startPosition, 0.F }, { 0.F, 1.F, 0.F, 1.F } },
+    { { (-1) * startPosition * cosf(angle) + startPosition * sinf(angle), (-1) * startPosition, 0.F }, { 0.F, 0.F, 1.F, 1.F } }
+  };
+
+  UINT8* ptr_vertexDataBegin{nullptr};
+  m_vertexBuffer->Map(0, nullptr, reinterpret_cast<void**>(&ptr_vertexDataBegin));
+  memcpy(ptr_vertexDataBegin, triangleVertices, sizeof(triangleVertices));
+  m_vertexBuffer->Unmap(0, nullptr);
 }
 
 void D3D12Engine::DirectX12Graphics::OnDestroy() {

@@ -24,11 +24,14 @@ namespace D3D12Engine {
   protected:
     void getHardwareAdapter(_In_ IDXGIFactory1* ptr_Factory1, _Outptr_opt_result_maybenull_ IDXGIAdapter1** ptr_Adapter1, bool requestHighPerfomanceAdapter);
     
+    float getElapsedSeconds();
+
     std::wstring m_WindowName{0};
     UINT m_WindowHeight{0};
     UINT m_WindowWidth{0};
 
     float m_Coefficient{0.F};
+    float m_timeRatio{0.F};
 
     std::wstring m_assetPath{0};
 

@@ -1,6 +1,7 @@
 #include <Include/Graphics/InterfaceDirectX12.hpp>
 #include <filesystem>
 #include <iostream>
+#include <chrono>
 
 D3D12Engine::InterfaceDirectX12::InterfaceDirectX12(UINT WindowHeight, UINT WindowWidht, std::wstring WindowName) :
   m_WindowHeight(WindowHeight), 
@@ -12,6 +13,14 @@ D3D12Engine::InterfaceDirectX12::InterfaceDirectX12(UINT WindowHeight, UINT Wind
   m_assetPath = buffer;
 
   m_Coefficient = static_cast<float>(WindowWidht) / static_cast<float>(WindowHeight);
+}
+
+float D3D12Engine::InterfaceDirectX12::getElapsedSeconds() {
+  static const auto startTime = std::chrono::high_resolution_clock::now();
+  auto currentTime = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<float> elapsed = currentTime - startTime;
+
+  return elapsed.count();
 }
 
 _Use_decl_annotations_
