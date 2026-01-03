@@ -14,5 +14,6 @@ Initializing the graphics pipeline and drawing the Triangle primitive
 - **Application Architecture** The window is implemented through the standard library, graphics are drawn independently within the window
 
 ## Launch
-- 1. Clone Git repository
-- 2. Run `Prewiew.ps1` script
+1. Clone Git repository
+2. Run `Prewiew.ps1` script
+3. Enjoy :D
