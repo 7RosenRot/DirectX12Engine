@@ -19,8 +19,8 @@ Initializing the graphics pipeline and drawing the Triangle primitive
 3. Enjoy :D
 
 ## Useful links
-1. https://petitl.fr/articles/creating-a-directx12-3d-engine-when-you-know-nothing#the-graphics-pipeline
-2. https://www.braynzarsoft.net/viewtutorial/q16390-04-directx-12-braynzar-soft-tutorials
+- Great theory: https://petitl.fr/articles/creating-a-directx12-3d-engine-when-you-know-nothing#the-graphics-pipeline
+- A wonderful course, quite complete and detailed: https://www.braynzarsoft.net/viewtutorial/q16390-04-directx-12-braynzar-soft-tutorials
 
 ## References
 1. https://github.com/CanYouCatchMe01/DirectX12Model3D
