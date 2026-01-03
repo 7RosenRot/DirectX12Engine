@@ -2,19 +2,28 @@
 #define _UNICODE
 
 #include <Include/Window/Window.hpp>
+#include <Include/Graphics/DirectX12Graphics.hpp>
 
 LRESULT CALLBACK D3D12Engine::Window::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+  DirectX12Graphics* renderWindow = reinterpret_cast<DirectX12Graphics*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
+
   switch (msg) {
   case WM_CREATE: {
     LPCREATESTRUCT pCreateStruct = reinterpret_cast<LPCREATESTRUCT>(lParam);
     SetWindowLongPtr(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(pCreateStruct->lpCreateParams));
+    return DefWindowProc(hwnd, msg, wParam, lParam);
+  }
+  case WM_PAINT:
+    if (renderWindow) {
+      renderWindow->OnUpdate();
+      renderWindow->OnRender();
     }
-    break;
+    return 0;
   case WM_GETMINMAXINFO: {
       LPMINMAXINFO setBorders = (LPMINMAXINFO)lParam;
 
-      setBorders->ptMinTrackSize.x = min_WndWidth;
-      setBorders->ptMinTrackSize.y = min_WndHeight;
+      setBorders->ptMinTrackSize.x = m_minWndWidth;
+      setBorders->ptMinTrackSize.y = m_minWndHeight;
     }
     return 0;
   case WM_DESTROY:
@@ -50,13 +59,13 @@ D3D12Engine::Window::Window(InterfaceDirectX12* InterfaceDirectX12, HINSTANCE hI
   static const auto wndClassID = std::invoke(registerWindowClassFunction);
   if (!wndClassID) throw std::runtime_error("RegisterClassEX Failed!");
 
-  RECT WndRect{0, 0, static_cast<LONG>(InterfaceDirectX12->getWindowWidth()), static_cast<LONG>(InterfaceDirectX12->getWindowHeight())};
+  RECT WndRect{0, 0, static_cast<LONG>(InterfaceDirectX12->GetWindowWidth()), static_cast<LONG>(InterfaceDirectX12->GetWindowHeight())};
   AdjustWindowRect(&WndRect, WS_OVERLAPPEDWINDOW, false);
 
   m_hWnd = CreateWindowEx(
     NULL,
     MAKEINTATOM(wndClassID),
-    InterfaceDirectX12->getWindowName(),
+    InterfaceDirectX12->GetWindowName(),
     WS_OVERLAPPEDWINDOW,
     CW_USEDEFAULT,
     CW_USEDEFAULT,
@@ -73,7 +82,7 @@ D3D12Engine::Window::Window(InterfaceDirectX12* InterfaceDirectX12, HINSTANCE hI
   ShowWindow(static_cast<HWND>(m_hWnd), CmdShow);
 }
 
-void D3D12Engine::Window::run_GameLoop() {
+void D3D12Engine::Window::RunGameLoop() {
   MSG msg{};
 
   while (m_isRunning) {

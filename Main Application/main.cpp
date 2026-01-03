@@ -8,7 +8,7 @@ int main(void) {
   int m_CmdShow = SW_SHOW;
 
   D3D12Engine::Window wnd(&MyApplication, hInstance, m_CmdShow);
-  wnd.run_GameLoop();
+  wnd.RunGameLoop();
 
   return 0;
 }

@@ -1,5 +1,5 @@
 $ErrorActionPreference = "Stop"
-$BuildType = "RelWithDebInfo"
+$BuildType = "Release"
 $ProjectName = "DIrectX12Engine"
 $BuildDir = "build"
 
@@ -15,7 +15,7 @@ cmake -S . -B $BuildDir -DCMAKE_BUILD_TYPE=$BuildType
 Write-Host ""
 Write-Host "-----------------> Assembling Project $ProjectName..."
 Write-Host ""
-cmake --build $BuildDir --parallel
+cmake --build $BuildDir
 
 Write-Host ""
 Write-Host "-----------------> Executing..."
