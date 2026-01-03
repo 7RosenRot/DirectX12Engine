@@ -8,10 +8,10 @@ Initializing the graphics pipeline and drawing the Triangle primitive
 
 
 ## Peculiarities
-- **API** DirectX 12
-- **Language** C++20
-- **Building System** CMake
-- **Application Architecture** The window is implemented through the standard library, graphics are drawn independently within the window
+- **API** `DirectX 12`
+- **Language** `C++20`
+- **Building System** `CMake`
+- **Application Architecture** The window is implemented through the standard library `Windows.h`, graphics are drawn independently within the window
 
 ## Launch
 1. Clone Git repository
