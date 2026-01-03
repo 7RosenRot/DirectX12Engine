@@ -15,7 +15,7 @@ Initializing the graphics pipeline and drawing the Triangle primitive
 
 ## Launch
 1. Clone Git repository
-2. Run `Prewiew.ps1` script
+2. Run `PreView.ps1` script
 3. Enjoy :D
 
 ## Useful links
