@@ -3,7 +3,7 @@
 Initializing the graphics pipeline and drawing the Triangle primitive
 
 <p align="center">
-  <img src="preview/preview.gif" alt="Preview" width="600">
+  <img src="preview/Preview.gif" alt="Preview" width="600">
 </p>
 
 
