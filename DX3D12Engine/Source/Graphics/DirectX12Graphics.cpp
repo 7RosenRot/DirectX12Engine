@@ -1,5 +1,8 @@
 #include <Include/Graphics/DirectX12Graphics.hpp>
+
 #include <filesystem>
+#include <exception>
+#include <stdexcept>
 
 D3D12Engine::DirectX12Graphics::DirectX12Graphics(UINT WindowHeight, UINT WindowWidth, std::wstring WindowName) :
   InterfaceDirectX12(WindowHeight, WindowWidth, WindowName),
@@ -10,34 +13,30 @@ D3D12Engine::DirectX12Graphics::DirectX12Graphics(UINT WindowHeight, UINT Window
 D3D12Engine::DirectX12Graphics::~DirectX12Graphics() {}
 
 void D3D12Engine::DirectX12Graphics::OnInitialize() {
-  // Подготовливаем среду для работы
-  loadPipeline();
+  LoadPipeline();
   
-  // Устанавливаем контракт между нашим кодом и шейдерами
-  loadAssets();
+  LoadAssets();
 }
 
 void D3D12Engine::DirectX12Graphics::OnRender() {
-  // Выполняем отрисовку
-  fillCommandList();
+  FillCommandList();
 
   ID3D12CommandList* ptr_cmdLists[] = {m_cmdList.Get()};
   m_cmdQueue->ExecuteCommandLists(_countof(ptr_cmdLists), ptr_cmdLists);
 
   m_swapChain->Present(1, 0);
 
-  waitForPreviousFrame();
+  WaitForPreviousFrame();
 }
 
 void D3D12Engine::DirectX12Graphics::OnUpdate() {
-  // Обновляем кадр, сели встречено какое-то изменение
-  auto angle = getElapsedSeconds() * 2.F;
+  auto angle = GetElapsedSeconds() * 2.F;
   float startPosition = 0.25F * m_Coefficient;
   
   m_Vertex triangleVertices[] = {
-    { {        0.F,                                                              startPosition, 0.F }, { 1.F, 0.F, 0.F, 1.F } },
-    { {        startPosition * cosf(angle) + startPosition * sinf(angle), (-1) * startPosition, 0.F }, { 0.F, 1.F, 0.F, 1.F } },
-    { { (-1) * startPosition * cosf(angle) + startPosition * sinf(angle), (-1) * startPosition, 0.F }, { 0.F, 0.F, 1.F, 1.F } }
+    { {                                0.F,        startPosition, 0.5F - startPosition * sinf(angle) }, { 1.F, 0.F, 0.F, 1.F } },
+    { {        startPosition * cosf(angle), (-1) * startPosition, 0.5F - startPosition * sinf(angle) }, { 0.F, 1.F, 0.F, 1.F } },
+    { { (-1) * startPosition * cosf(angle), (-1) * startPosition, 0.5F - startPosition * sinf(angle) }, { 0.F, 0.F, 1.F, 1.F } }
   };
 
   UINT8* ptr_vertexDataBegin{nullptr};
@@ -47,13 +46,11 @@ void D3D12Engine::DirectX12Graphics::OnUpdate() {
 }
 
 void D3D12Engine::DirectX12Graphics::OnDestroy() {
-  // Дожидаемся отрисовки последнего кадра и завершаем конвейер
-  waitForPreviousFrame();
+  WaitForPreviousFrame();
   CloseHandle(m_fenceEvent);
 }
 
-void D3D12Engine::DirectX12Graphics::loadPipeline() {
-  //Если сборка проекта Debug - включаем слой отладки (в случае ошибок - Debug Layer сдеает запись в лог)
+void D3D12Engine::DirectX12Graphics::LoadPipeline() {
   UINT DXGIFactoryFlags{0};
 #if defined(_DEBUG)
   {
@@ -64,11 +61,9 @@ void D3D12Engine::DirectX12Graphics::loadPipeline() {
     }
   }
 #endif
-  //Создаём главную фабрику (Менеджер). Задачи - поиск и перечисление всех адаптеров, создание Swap Chain, отслеживание, на какой монитор выводится изображение, ...
   Microsoft::WRL::ComPtr<IDXGIFactory4> factory4;
   CreateDXGIFactory2(DXGIFactoryFlags, IID_PPV_ARGS(&factory4));
 
-  // Выбираем адаптер, который будет рисовать графику: Warp (Software) - нагрузку возьмёт на себя CPU, Hardware - нагрузку берёт на себя GPU
   if (m_useWarpAdapter) {
     Microsoft::WRL::ComPtr<IDXGIAdapter> warpAdapter;
     
@@ -78,70 +73,62 @@ void D3D12Engine::DirectX12Graphics::loadPipeline() {
   else {
     Microsoft::WRL::ComPtr<IDXGIAdapter1> hardwareAdapter;
     
-    getHardwareAdapter(factory4.Get(), &hardwareAdapter, true);
+    GetHardwareAdapter(factory4.Get(), &hardwareAdapter, true);
     D3D12CreateDevice(hardwareAdapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_device));
   }
 
-  // Создаём дескриптор очереди комнад GPU. Очередь команд - точка входа в GPU
   D3D12_COMMAND_QUEUE_DESC cmdQueueDescriptor{};
-  cmdQueueDescriptor.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;                     // Нет флагов - стнадартное поведение
-  cmdQueueDescriptor.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;                     // Тип - использовать для отрисовки, рендера, вчислений
-  m_device->CreateCommandQueue(&cmdQueueDescriptor, IID_PPV_ARGS(&m_cmdQueue)); // Мы создали объект структуры, проинициализировали его поля, теперь "скопируем" его в подготовленное поле нашего класса
+  cmdQueueDescriptor.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+  cmdQueueDescriptor.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+  m_device->CreateCommandQueue(&cmdQueueDescriptor, IID_PPV_ARGS(&m_cmdQueue));
 
-  // Создаём дескриптор Swap Chain, фактически - чертёж, как должен выглядеть механизм вывода изображения 
   DXGI_SWAP_CHAIN_DESC1 swapChainDescriptor{};
-  swapChainDescriptor.BufferCount = m_frameCount;                    // Количество буферов (холстов): 2 - двойная буферизация
-  swapChainDescriptor.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT; // Используем наши буферы как место, КУДА отрисовываются пиксели
-  swapChainDescriptor.Format = DXGI_FORMAT_R8G8B8A8_UNORM;           // Формат пискеля: RGBA, 8 бит/канал
-  swapChainDescriptor.SampleDesc.Count = 1;                          // Отключение MSAA на уровне Swap Chain
-  swapChainDescriptor.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;    // Путь кадра: Нарисовали -> Показали -> Удалили (самый современный и производительный способ)
-  swapChainDescriptor.Height = m_WindowHeight;                       // Высота буфера
-  swapChainDescriptor.Width = m_WindowWidth;                         // Ширина буфера
+  swapChainDescriptor.BufferCount = m_frameCount;
+  swapChainDescriptor.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+  swapChainDescriptor.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+  swapChainDescriptor.SampleDesc.Count = 1;
+  swapChainDescriptor.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+  swapChainDescriptor.Height = m_WindowHeight;
+  swapChainDescriptor.Width = m_WindowWidth;
 
-  // Создаем временный Swap Chain ver.1 - Почему? CreateSwapChainForHwnd() - не может принять SC ver.3 
   Microsoft::WRL::ComPtr<IDXGISwapChain1> swapChain;
   factory4->CreateSwapChainForHwnd(
-    m_cmdQueue.Get(),               // Привязка к нашей очереди команд GPU
-    D3D12Engine::Window::getHwnd(), // Дескриптор созданного окна HWND
-    &swapChainDescriptor,           // Настройки Swap Chain
-    nullptr, nullptr,               // Доп. параметры
-    &swapChain                      // Записываем во врменный Swap Chain
+    m_cmdQueue.Get(),
+    D3D12Engine::Window::GetHwnd(),
+    &swapChainDescriptor,
+    nullptr, nullptr,
+    &swapChain
   );
 
   factory4->MakeWindowAssociation(
-    D3D12Engine::Window::getHwnd(),  // Дескриптор созданного окна HWND
-    DXGI_MWA_NO_ALT_ENTER            // Не используем Alt+Enter - это будет реализовано программно
+    D3D12Engine::Window::GetHwnd(),
+    DXGI_MWA_NO_ALT_ENTER
   );
   
-  swapChain.As(&m_swapChain);                              // Обновляем Swap Chain ver.1 -> ver.3
-  m_frameIndex = m_swapChain->GetCurrentBackBufferIndex(); // Получаем индекс актуального (отрисовываемого) буфера
+  swapChain.As(&m_swapChain);
+  m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 
-  // Создаём дескриптор кучи дескрипторов - блоки данных, описывающие какой-либо ресурс
   D3D12_DESCRIPTOR_HEAP_DESC rtvDescriptorHeap{};
-  rtvDescriptorHeap.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE; // Делаем кучу невидимой для шейдеров HLSL
-  rtvDescriptorHeap.NodeMask = 0;                            // Если в системе несколько GPU, выбираем только нулевую
-  rtvDescriptorHeap.NumDescriptors = m_frameCount;           // Выделяем место ровно под два "холста"
-  rtvDescriptorHeap.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;   // Используем эту кучу только для дескрипторов RTV (Render Target View) - "холстов"
+  rtvDescriptorHeap.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+  rtvDescriptorHeap.NodeMask = 0;
+  rtvDescriptorHeap.NumDescriptors = m_frameCount;
+  rtvDescriptorHeap.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
 
-  // Выделяем непрерывный участок в памяти видеокарты, где будут храниться описатели (дескрипторы) наших буферов
   m_device->CreateDescriptorHeap(&rtvDescriptorHeap, IID_PPV_ARGS(&m_rtvDescriptorHeap));
   
-  // Поскольку размер дескриптора зависит от модели видеокарты, то, чтобы проходиться по массиву дескрипторов, нам нужно знать - где заканчивается один дескриптор и начинается другой, для этого выясняем размер одного RTV дескриптора
   m_rtvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
-  // Получаем указатель на начало кучи/массива RTV дескрипторов
   CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
   for (UINT frame = 0; frame < m_frameCount; frame += 1) {
-    m_swapChain->GetBuffer(frame, IID_PPV_ARGS(&m_renderTargets[frame]));               // Получаем из Swap Chain указатель на буфер №frame
-    m_device->CreateRenderTargetView(m_renderTargets[frame].Get(), nullptr, rtvHandle); // Возьми текстуру m_renderTargets[frame] и создай на неё описание в ячейке, куда указывает rtvHandle
-    rtvHandle.Offset(1, m_rtvDescriptorSize);                                           // Используя ранее полученный размер дескрипотра, сдвигаем казатель на 1 десриптор вперёд
+    m_swapChain->GetBuffer(frame, IID_PPV_ARGS(&m_renderTargets[frame]));
+    m_device->CreateRenderTargetView(m_renderTargets[frame].Get(), nullptr, rtvHandle);
+    rtvHandle.Offset(1, m_rtvDescriptorSize);
   }
 
-  // Создаём Command Allocator - физическое хранилище команд в байтах
   m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_cmdAllocator));
 }
 
-void D3D12Engine::DirectX12Graphics::loadAssets() {
+void D3D12Engine::DirectX12Graphics::LoadAssets() {
   CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDescriptor{};
   rootSignatureDescriptor.Init(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
@@ -160,7 +147,7 @@ void D3D12Engine::DirectX12Graphics::loadAssets() {
   Microsoft::WRL::ComPtr<ID3DBlob> vertexShader;
   Microsoft::WRL::ComPtr<ID3DBlob> pixelShader;
 
-  std::wstring shadersPath = D3D12Engine::InterfaceDirectX12::getAssetPath(L"Shaders.hlsl");
+  std::wstring shadersPath = D3D12Engine::InterfaceDirectX12::GetAssetPath(L"Shaders.hlsl");
   if (!std::filesystem::exists(shadersPath)) OutputDebugStringW((L"ERROR: File not found - " + shadersPath + L'\n').c_str());
 
   D3DCompileFromFile(
@@ -239,10 +226,10 @@ void D3D12Engine::DirectX12Graphics::loadAssets() {
     std::throw_with_nested(HRESULT_FROM_WIN32(GetLastError()));
   }
 
-  waitForPreviousFrame();
+  WaitForPreviousFrame();
 }
 
-void D3D12Engine::DirectX12Graphics::fillCommandList() {
+void D3D12Engine::DirectX12Graphics::FillCommandList() {
   m_cmdAllocator->Reset();
   m_cmdList->Reset(m_cmdAllocator.Get(), m_pipelineState.Get());
 
@@ -280,7 +267,7 @@ void D3D12Engine::DirectX12Graphics::fillCommandList() {
   m_cmdList->Close();
 }
 
-void D3D12Engine::DirectX12Graphics::waitForPreviousFrame() {
+void D3D12Engine::DirectX12Graphics::WaitForPreviousFrame() {
   const UINT64 fence = m_fenceValue;
   m_cmdQueue->Signal(m_fence.Get(), fence);
   m_fenceValue += 1;

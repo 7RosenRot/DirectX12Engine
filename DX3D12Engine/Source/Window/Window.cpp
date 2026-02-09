@@ -9,26 +9,28 @@ LRESULT CALLBACK D3D12Engine::Window::WndProc(HWND hwnd, UINT msg, WPARAM wParam
 
   switch (msg) {
   case WM_CREATE: {
-    LPCREATESTRUCT pCreateStruct = reinterpret_cast<LPCREATESTRUCT>(lParam);
-    SetWindowLongPtr(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(pCreateStruct->lpCreateParams));
-    return DefWindowProc(hwnd, msg, wParam, lParam);
-  }
-  case WM_PAINT:
-    if (renderWindow) {
-      renderWindow->OnUpdate();
-      renderWindow->OnRender();
+      LPCREATESTRUCT pCreateStruct = reinterpret_cast<LPCREATESTRUCT>(lParam);
+      SetWindowLongPtr(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(pCreateStruct->lpCreateParams));
     }
-    return 0;
+    return DefWindowProc(hwnd, msg, wParam, lParam);
   case WM_GETMINMAXINFO: {
       LPMINMAXINFO setBorders = (LPMINMAXINFO)lParam;
 
-      setBorders->ptMinTrackSize.x = min_WndWidth;
-      setBorders->ptMinTrackSize.y = min_WndHeight;
+      setBorders->ptMinTrackSize.x = 500;
+      setBorders->ptMinTrackSize.y = 250;
     }
     return 0;
-  case WM_DESTROY:
-    PostQuitMessage(0);
-    break;
+  case WM_PAINT: {
+      if (renderWindow) {
+        renderWindow->OnUpdate();
+        renderWindow->OnRender();
+      }
+    }
+    return 0;
+  case WM_DESTROY: {
+      PostQuitMessage(0);
+    }
+    return 0;
   default:
     return DefWindowProc(hwnd, msg, wParam, lParam);
   }
@@ -36,36 +38,34 @@ LRESULT CALLBACK D3D12Engine::Window::WndProc(HWND hwnd, UINT msg, WPARAM wParam
   return 0;
 }
 
-D3D12Engine::Window::Window(InterfaceDirectX12* InterfaceDirectX12, HINSTANCE hInstance, int CmdShow) {
-  auto registerWindowClassFunction = []() {
-    WNDCLASSEX wndClass{};
-    
-    wndClass.cbSize = sizeof(WNDCLASSEX);
-    wndClass.lpszClassName = L"WindowName";
-    wndClass.lpszMenuName = L"";
+D3D12Engine::Window::Window() {}
 
-    wndClass.style = CS_HREDRAW | CS_VREDRAW;
-    wndClass.hbrBackground = (HBRUSH)COLOR_WINDOW;
-    wndClass.hIcon = LoadIcon(NULL, IDI_APPLICATION);
-    wndClass.hIconSm = LoadIcon(NULL, IDI_APPLICATION);
-    wndClass.hCursor = LoadCursor(NULL, IDC_ARROW);
-    wndClass.hInstance = NULL;
+int D3D12Engine::Window::RunApplication(InterfaceDirectX12* InterfaceDirectX12, HINSTANCE hInstance, int CmdShow) {
+  
+  WNDCLASSEX wndClass{0};
 
-    wndClass.lpfnWndProc = &WndProc;
+  wndClass.cbSize = sizeof(WNDCLASSEX);
+  wndClass.lpszClassName = L"WindowName";
+  wndClass.lpszMenuName = L"";
 
-    return RegisterClassEx(&wndClass);
-  };
+  wndClass.style = CS_HREDRAW | CS_VREDRAW;
+  wndClass.hbrBackground = (HBRUSH)COLOR_WINDOW;
+  wndClass.hIcon = LoadIcon(NULL, IDI_APPLICATION);
+  wndClass.hIconSm = LoadIcon(NULL, IDI_APPLICATION);
+  wndClass.hCursor = LoadCursor(NULL, IDC_ARROW);
+  wndClass.hInstance = NULL;
 
-  static const auto wndClassID = std::invoke(registerWindowClassFunction);
-  if (!wndClassID) throw std::runtime_error("RegisterClassEX Failed!");
+  wndClass.lpfnWndProc = &WndProc;
 
-  RECT WndRect{0, 0, static_cast<LONG>(InterfaceDirectX12->getWindowWidth()), static_cast<LONG>(InterfaceDirectX12->getWindowHeight())};
+  static const ATOM wndClassID = RegisterClassEx(&wndClass);
+
+  RECT WndRect{0, 0, static_cast<LONG>(InterfaceDirectX12->GetWindowWidth()), static_cast<LONG>(InterfaceDirectX12->GetWindowHeight())};
   AdjustWindowRect(&WndRect, WS_OVERLAPPEDWINDOW, false);
 
-  m_hWnd = CreateWindowEx(
+  m_hWnd = CreateWindowExW(
     NULL,
     MAKEINTATOM(wndClassID),
-    InterfaceDirectX12->getWindowName(),
+    InterfaceDirectX12->GetWindowName(),
     WS_OVERLAPPEDWINDOW,
     CW_USEDEFAULT,
     CW_USEDEFAULT,
@@ -76,26 +76,23 @@ D3D12Engine::Window::Window(InterfaceDirectX12* InterfaceDirectX12, HINSTANCE hI
     hInstance,
     InterfaceDirectX12
   );
-  if (!m_hWnd) throw std::runtime_error("m_handle Failed!");
 
   InterfaceDirectX12->OnInitialize();
   ShowWindow(static_cast<HWND>(m_hWnd), CmdShow);
-}
-
-void D3D12Engine::Window::run_GameLoop() {
+  
   MSG msg{};
+  ZeroMemory(&msg, sizeof(msg));
 
-  while (m_isRunning) {
+  while (msg.message != WM_QUIT) {
     while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
-      if (msg.message == WM_QUIT) {
-        m_isRunning = false;
-
-        break;
-      }
       TranslateMessage(&msg);
       DispatchMessage(&msg);
     }
   }
+
+  InterfaceDirectX12->OnDestroy();
+
+  return 0;
 }
 
 D3D12Engine::Window::~Window() {
