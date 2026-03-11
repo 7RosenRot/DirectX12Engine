@@ -1,20 +1,41 @@
 #pragma once
-#include <Include/Graphics/d3dx12.hpp>
+#include <Include/Graphics/d3dx12.h>
+
 #include <wtypes.h>
 #include <string>
+#include <dxgi1_6.h>
+#include <d3d12.h>
 
 namespace D3D12Engine {
-    class InterfaceDirectX12 {
-    public:
-        InterfaceDirectX12(UINT WindowHeight, UINT WindowWidth, std::wstring WindowName);
-        virtual ~InterfaceDirectX12();
+  class InterfaceDirectX12 {
+  public:
+    InterfaceDirectX12(UINT WindowHeight, UINT WindowWidth, std::wstring WindowName);
+    virtual ~InterfaceDirectX12();
 
-        UINT getWindowHeight() { return m_WindowHeight; }
-        UINT getWindowWidth() { return m_WindowWidth; }
-        const WCHAR* getWindowName() { return m_WindowName.c_str(); }
-    protected:
-        std::wstring m_WindowName;
-        UINT m_WindowHeight;
-        UINT m_WindowWidth;
-    };
+    virtual void OnInitialize() = 0;
+    virtual void OnRender() = 0;
+    virtual void OnUpdate() = 0;
+    virtual void OnDestroy() = 0;
+
+    UINT GetWindowHeight() { return m_WindowHeight; }
+    UINT GetWindowWidth() { return m_WindowWidth; }
+    const WCHAR* GetWindowName() { return m_WindowName.c_str(); }
+    std::wstring GetAssetPath(LPCWSTR assetName) { return m_assetPath + L"\\DX3D12Engine\\Shaders\\" + assetName;}
+
+  protected:
+    void GetHardwareAdapter(_In_ IDXGIFactory1* pFactory1, _Outptr_opt_result_maybenull_ IDXGIAdapter1** ppAdapter1, bool requestHighPerfomanceAdapter);
+    
+    float GetElapsedSeconds();
+
+    std::wstring m_WindowName = L"";
+    UINT m_WindowHeight{0};
+    UINT m_WindowWidth{0};
+
+    float m_Coefficient{0.F};
+    float m_timeRatio{0.F};
+
+    std::wstring m_assetPath = L"";
+
+    bool m_useWarpAdapter{false};
+  };
 }

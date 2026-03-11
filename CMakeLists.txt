@@ -28,7 +28,11 @@ PRIVATE
 # -- link libaries -- #
 target_link_libraries(DirectX12Engine
 PRIVATE
+<<<<<<< HEAD
     d3d12
     dxgi 
     d3dcompiler
+=======
+    d3d12 dxgi dxguid d3dcompiler
+>>>>>>> 0b07bfd814b1755b032d4af1ab33c737d90cb5b2
 )
