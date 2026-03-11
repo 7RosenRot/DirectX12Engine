@@ -21,7 +21,7 @@ void D3D12Engine::DirectX12Graphics::OnInitialize() {
 void D3D12Engine::DirectX12Graphics::OnRender() {
   FillCommandList();
 
-  ID3D12CommandList* ptr_cmdLists[] = {m_cmdList.Get()};
+  ID3D12CommandList* ptr_cmdLists[] = { m_cmdList.Get() };
   m_cmdQueue->ExecuteCommandLists(_countof(ptr_cmdLists), ptr_cmdLists);
 
   m_swapChain->Present(1, 0);
@@ -29,21 +29,7 @@ void D3D12Engine::DirectX12Graphics::OnRender() {
   WaitForPreviousFrame();
 }
 
-void D3D12Engine::DirectX12Graphics::OnUpdate() {
-  auto angle = GetElapsedSeconds() * 2.F;
-  float startPosition = 0.25F * m_Coefficient;
-  
-  m_Vertex triangleVertices[] = {
-    { {                                0.F,        startPosition, 0.5F - startPosition * sinf(angle) }, { 1.F, 0.F, 0.F, 1.F } },
-    { {        startPosition * cosf(angle), (-1) * startPosition, 0.5F - startPosition * sinf(angle) }, { 0.F, 1.F, 0.F, 1.F } },
-    { { (-1) * startPosition * cosf(angle), (-1) * startPosition, 0.5F - startPosition * sinf(angle) }, { 0.F, 0.F, 1.F, 1.F } }
-  };
-
-  UINT8* ptr_vertexDataBegin{nullptr};
-  m_vertexBuffer->Map(0, nullptr, reinterpret_cast<void**>(&ptr_vertexDataBegin));
-  memcpy(ptr_vertexDataBegin, triangleVertices, sizeof(triangleVertices));
-  m_vertexBuffer->Unmap(0, nullptr);
-}
+void D3D12Engine::DirectX12Graphics::OnUpdate() {}
 
 void D3D12Engine::DirectX12Graphics::OnDestroy() {
   WaitForPreviousFrame();
@@ -83,14 +69,14 @@ void D3D12Engine::DirectX12Graphics::LoadPipeline() {
   m_device->CreateCommandQueue(&cmdQueueDescriptor, IID_PPV_ARGS(&m_cmdQueue));
 
   DXGI_SWAP_CHAIN_DESC1 swapChainDescriptor{};
-  swapChainDescriptor.BufferCount = m_frameCount;
-  swapChainDescriptor.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+  swapChainDescriptor.Width = m_WindowWidth;
+  swapChainDescriptor.Height = m_WindowHeight;
   swapChainDescriptor.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
   swapChainDescriptor.SampleDesc.Count = 1;
+  swapChainDescriptor.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+  swapChainDescriptor.BufferCount = m_frameCount;
   swapChainDescriptor.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-  swapChainDescriptor.Height = m_WindowHeight;
-  swapChainDescriptor.Width = m_WindowWidth;
-
+  
   Microsoft::WRL::ComPtr<IDXGISwapChain1> swapChain;
   factory4->CreateSwapChainForHwnd(
     m_cmdQueue.Get(),
@@ -144,27 +130,47 @@ void D3D12Engine::DirectX12Graphics::LoadAssets() {
   UINT compileFlags{0};
 #endif
 
+  HRESULT hResult{0};
+
+  std::wstring vtxShaderPath = D3D12Engine::InterfaceDirectX12::GetAssetPath(L"VertexShader.hlsl");
+  if (!std::filesystem::exists(vtxShaderPath)) { throw std::runtime_error("Shaders files do not exist!"); }
+  
   Microsoft::WRL::ComPtr<ID3DBlob> vertexShader;
-  Microsoft::WRL::ComPtr<ID3DBlob> pixelShader;
-
-  std::wstring shadersPath = D3D12Engine::InterfaceDirectX12::GetAssetPath(L"Shaders.hlsl");
-  if (!std::filesystem::exists(shadersPath)) OutputDebugStringW((L"ERROR: File not found - " + shadersPath + L'\n').c_str());
-
-  D3DCompileFromFile(
-    shadersPath.c_str(), 
+  Microsoft::WRL::ComPtr<ID3DBlob> vtxErrorBuffer;
+  
+  hResult = D3DCompileFromFile(
+    vtxShaderPath.c_str(),
     nullptr, nullptr,
     "VSMain", "vs_5_0",
     compileFlags, 0,
-    &vertexShader, nullptr
+    &vertexShader, &vtxErrorBuffer
   );
 
-  D3DCompileFromFile(
-    shadersPath.c_str(), 
+  if (FAILED(hResult)) {
+    if (vtxErrorBuffer) { OutputDebugStringA((char*)vtxErrorBuffer->GetBufferPointer()); }
+
+    throw std::runtime_error("Vertex Shader compilation has failed!");
+  }
+
+  std::wstring pxlShaderPath = D3D12Engine::InterfaceDirectX12::GetAssetPath(L"PixelShader.hlsl");
+  if (!std::filesystem::exists(pxlShaderPath)) { throw std::runtime_error("Shaders files do not exist!"); }
+
+  Microsoft::WRL::ComPtr<ID3DBlob> pixelShader;
+  Microsoft::WRL::ComPtr<ID3DBlob> pxlErrorBuffer;
+  
+  hResult = D3DCompileFromFile(
+    pxlShaderPath.c_str(),
     nullptr, nullptr,
     "PSMain", "ps_5_0",
     compileFlags, 0,
-    &pixelShader, nullptr
+    &pixelShader, &pxlErrorBuffer
   );
+
+  if (FAILED(hResult)) {
+    if (pxlErrorBuffer) { OutputDebugStringA((char*)pxlErrorBuffer->GetBufferPointer()); }
+    
+    throw std::runtime_error("Pixel Shader compilation has failed!");
+  }
 
   D3D12_INPUT_ELEMENT_DESC inputElementDescriptor[] = {
     {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
@@ -172,7 +178,7 @@ void D3D12Engine::DirectX12Graphics::LoadAssets() {
   };
 
   D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDescriptor{};
-  psoDescriptor.InputLayout = {inputElementDescriptor, _countof(inputElementDescriptor)};
+  psoDescriptor.InputLayout = { inputElementDescriptor, _countof(inputElementDescriptor) };
   psoDescriptor.pRootSignature = m_rootSignature.Get();
   psoDescriptor.VS = CD3DX12_SHADER_BYTECODE(vertexShader.Get());
   psoDescriptor.PS = CD3DX12_SHADER_BYTECODE(pixelShader.Get());
@@ -193,30 +199,89 @@ void D3D12Engine::DirectX12Graphics::LoadAssets() {
 
   m_cmdList->Close();
 
-  m_Vertex triangleVertices[] = {
-    { {  0.F,    0.25F * m_Coefficient, 0.F }, { 1.F, 0.F, 0.F, 1.F } },
-    { {  0.25F, -0.25F * m_Coefficient, 0.F }, { 0.F, 1.F, 0.F, 1.F } },
-    { { -0.25F, -0.25F * m_Coefficient, 0.F }, { 0.F, 0.F, 1.F, 1.F } }
+  m_Vertex rectangleVertices[] = {
+    { { -0.5F,  0.5F, 0.F }, { 1.F, 0.F, 0.F, 1.F } },
+    { {  0.5F, -0.5F, 0.F }, { 0.F, 1.F, 0.F, 1.F } },
+    { { -0.5F, -0.5F, 0.F }, { 0.F, 0.F, 1.F, 1.F } },
+    { {  0.5F,  0.5F, 0.F }, { 0.F, 0.F, 1.F, 1.F } },
+    { {  0.F,   1.F,  0.F }, { 1.F, 0.F, 1.F, 1.F } },
+    { {  0.F,  -1.F,  0.F }, { 1.F, 0.F, 1.F, 1.F } }
   };
 
-  const size_t vertexBufferSize = sizeof(triangleVertices);
+  const size_t vertexBufferSize = sizeof(rectangleVertices);
 
-  CD3DX12_HEAP_PROPERTIES heapProperties{};
-  heapProperties.Type = D3D12_HEAP_TYPE_UPLOAD;
-
-  CD3DX12_RESOURCE_DESC resourceDesriptor = CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize);
-
-  m_device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesriptor, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&m_vertexBuffer));
-
-  UINT8* ptr_vertexDataBegin{};
+  m_device->CreateCommittedResource(
+    &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+    D3D12_HEAP_FLAG_NONE,
+    &CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize),
+    D3D12_RESOURCE_STATE_GENERIC_READ,
+    nullptr,
+    IID_PPV_ARGS(&m_vertexBuffer)
+  );
+  
+  UINT8* ptr_vertexDataBegin{nullptr};
   CD3DX12_RANGE readRange{0, 0};
   m_vertexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&ptr_vertexDataBegin));
-  memcpy(ptr_vertexDataBegin, triangleVertices, vertexBufferSize);
+  memcpy(ptr_vertexDataBegin, rectangleVertices, vertexBufferSize);
   m_vertexBuffer->Unmap(0, nullptr);
+
+  /* Extending to index buffer */
+
+  DWORD indexRectangle[] = {
+    0, 3, 1,
+    0, 1, 2,
+    0, 3, 4,
+    1, 2, 5
+  };
+
+  const size_t indexBufferSize = sizeof(indexRectangle);
+
+  m_device->CreateCommittedResource(
+    &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+    D3D12_HEAP_FLAG_NONE,
+    &CD3DX12_RESOURCE_DESC::Buffer(indexBufferSize),
+    D3D12_RESOURCE_STATE_COPY_DEST,
+    nullptr,
+    IID_PPV_ARGS(&m_indexBuffer)
+  );
+
+  m_device->CreateCommittedResource(
+    &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+    D3D12_HEAP_FLAG_NONE,
+    &CD3DX12_RESOURCE_DESC::Buffer(indexBufferSize),
+    D3D12_RESOURCE_STATE_GENERIC_READ,
+    nullptr,
+    IID_PPV_ARGS(&m_indexBufferUploadHeap)
+  );
+
+  m_cmdList->Reset(m_cmdAllocator.Get(), m_pipelineState.Get());
+
+  D3D12_SUBRESOURCE_DATA indexData = {};
+  indexData.pData = reinterpret_cast<const void*>(indexRectangle);
+  indexData.RowPitch = indexBufferSize;
+  indexData.SlicePitch = indexBufferSize;
+  UpdateSubresources(m_cmdList.Get(), m_indexBuffer.Get(), m_indexBufferUploadHeap.Get(), 0, 0, 1, &indexData);
+
+  CD3DX12_RESOURCE_BARRIER transitionBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
+    m_indexBuffer.Get(),
+    D3D12_RESOURCE_STATE_COPY_DEST,
+    D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER
+  );
+
+  m_cmdList->ResourceBarrier(1, &transitionBarrier);
+
+  m_cmdList->Close();
+
+  ID3D12CommandList* ptr_cmdLists[] = { m_cmdList.Get() };
+  m_cmdQueue->ExecuteCommandLists(_countof(ptr_cmdLists), ptr_cmdLists);
 
   m_vertexBufferView.BufferLocation = m_vertexBuffer->GetGPUVirtualAddress();
   m_vertexBufferView.SizeInBytes = static_cast<UINT>(vertexBufferSize);
   m_vertexBufferView.StrideInBytes = sizeof(m_Vertex);
+
+  m_indexBufferView.BufferLocation = m_indexBuffer->GetGPUVirtualAddress();
+  m_indexBufferView.Format = DXGI_FORMAT_R32_UINT;
+  m_indexBufferView.SizeInBytes = static_cast<UINT>(indexBufferSize);
 
   m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence));
   m_fenceValue = 1;
@@ -237,15 +302,21 @@ void D3D12Engine::DirectX12Graphics::FillCommandList() {
   m_cmdList->RSSetViewports(1, &m_viewPort);
   m_cmdList->RSSetScissorRects(1, &m_scissorRect);
 
-  m_transitionBarier = CD3DX12_RESOURCE_BARRIER::Transition(
+  CD3DX12_RESOURCE_BARRIER transitionBarier{};
+
+  transitionBarier = CD3DX12_RESOURCE_BARRIER::Transition(
     m_renderTargets[m_frameIndex].Get(), 
     D3D12_RESOURCE_STATE_PRESENT, 
     D3D12_RESOURCE_STATE_RENDER_TARGET
   );
 
-  m_cmdList->ResourceBarrier(1, &m_transitionBarier);
+  m_cmdList->ResourceBarrier(1, &transitionBarier);
 
-  CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), m_frameIndex, m_rtvDescriptorSize);
+  CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(
+    m_rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart(),
+    m_frameIndex,
+    m_rtvDescriptorSize
+  );
 
   m_cmdList->OMSetRenderTargets(1, &rtvHandle, false, nullptr);
 
@@ -254,15 +325,17 @@ void D3D12Engine::DirectX12Graphics::FillCommandList() {
   m_cmdList->ClearRenderTargetView(rtvHandle, bgColor, 0, nullptr);
   m_cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
   m_cmdList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
-  m_cmdList->DrawInstanced(3, 1, 0, 0);
+  m_cmdList->IASetIndexBuffer(&m_indexBufferView);
+  
+  m_cmdList->DrawIndexedInstanced(12, 1, 0, 0, 0);
 
-  m_transitionBarier = CD3DX12_RESOURCE_BARRIER::Transition(
+  transitionBarier = CD3DX12_RESOURCE_BARRIER::Transition(
     m_renderTargets[m_frameIndex].Get(), 
     D3D12_RESOURCE_STATE_RENDER_TARGET, 
     D3D12_RESOURCE_STATE_PRESENT
   );
 
-  m_cmdList->ResourceBarrier(1, &m_transitionBarier);
+  m_cmdList->ResourceBarrier(1, &transitionBarier);
   
   m_cmdList->Close();
 }

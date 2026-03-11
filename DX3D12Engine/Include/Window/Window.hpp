@@ -10,7 +10,7 @@ namespace D3D12Engine {
     virtual ~Window();
 
     static HWND GetHwnd() { return m_hWnd; }
-    static int RunApplication(InterfaceDirectX12* InterfaceDirectX12, HINSTANCE hInstance, int CmdShow);
+    static void Run(InterfaceDirectX12* InterfaceDirectX12, HINSTANCE hInstance, int CmdShow);
   protected:
     bool m_isRunning{true};
     

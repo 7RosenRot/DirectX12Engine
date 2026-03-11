@@ -43,10 +43,15 @@ namespace D3D12Engine {
     UINT64 m_fenceValue;
     HANDLE m_fenceEvent;
     
+    /* Containers for verticies */
+
     Microsoft::WRL::ComPtr<ID3D12Resource> m_vertexBuffer;
     D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
 
-    CD3DX12_RESOURCE_BARRIER m_transitionBarier{};
+    Microsoft::WRL::ComPtr<ID3D12Resource> m_indexBuffer;
+    D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
+    Microsoft::WRL::ComPtr<ID3D12Resource> m_indexBufferUploadHeap;
+
     CD3DX12_VIEWPORT m_viewPort{};
     CD3DX12_RECT m_scissorRect{};
 

@@ -23,7 +23,7 @@ namespace D3D12Engine {
     std::wstring GetAssetPath(LPCWSTR assetName) { return m_assetPath + L"\\DX3D12Engine\\Shaders\\" + assetName;}
 
   protected:
-    void GetHardwareAdapter(_In_ IDXGIFactory1* ptr_Factory1, _Outptr_opt_result_maybenull_ IDXGIAdapter1** ptr_Adapter1, bool requestHighPerfomanceAdapter);
+    void GetHardwareAdapter(_In_ IDXGIFactory1* pFactory1, _Outptr_opt_result_maybenull_ IDXGIAdapter1** ppAdapter1, bool requestHighPerfomanceAdapter);
     
     float GetElapsedSeconds();
 

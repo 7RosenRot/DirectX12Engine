@@ -40,7 +40,7 @@ LRESULT CALLBACK D3D12Engine::Window::WndProc(HWND hwnd, UINT msg, WPARAM wParam
 
 D3D12Engine::Window::Window() {}
 
-int D3D12Engine::Window::RunApplication(InterfaceDirectX12* InterfaceDirectX12, HINSTANCE hInstance, int CmdShow) {
+void D3D12Engine::Window::Run(InterfaceDirectX12* InterfaceDirectX12, HINSTANCE hInstance, int CmdShow) {
   
   WNDCLASSEX wndClass{0};
 
@@ -91,8 +91,6 @@ int D3D12Engine::Window::RunApplication(InterfaceDirectX12* InterfaceDirectX12, 
   }
 
   InterfaceDirectX12->OnDestroy();
-
-  return 0;
 }
 
 D3D12Engine::Window::~Window() {

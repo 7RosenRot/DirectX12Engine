@@ -26,16 +26,16 @@ float D3D12Engine::InterfaceDirectX12::GetElapsedSeconds() {
 
 _Use_decl_annotations_
 void D3D12Engine::InterfaceDirectX12::GetHardwareAdapter(
-  _In_ IDXGIFactory1* ptr_Factory1,
-  _Outptr_opt_result_maybenull_ IDXGIAdapter1** ptr_Adapter1,
+  _In_ IDXGIFactory1* pFactory1,
+  _Outptr_opt_result_maybenull_ IDXGIAdapter1** ppAdapter1,
   bool requestHighPerfomanceAdpter)
 {
-  *ptr_Adapter1 = nullptr;
+  *ppAdapter1 = nullptr;
 
   Microsoft::WRL::ComPtr<IDXGIAdapter1> Adapter1;
   Microsoft::WRL::ComPtr<IDXGIFactory6> Factory6;
 
-  if (SUCCEEDED(ptr_Factory1->QueryInterface(IID_PPV_ARGS(&Factory6)))) {
+  if (SUCCEEDED(pFactory1->QueryInterface(IID_PPV_ARGS(&Factory6)))) {
     const auto GpuPreference = requestHighPerfomanceAdpter ? DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE : DXGI_GPU_PREFERENCE_UNSPECIFIED;
     
     for (UINT AdapterIndex = 0;
@@ -49,14 +49,14 @@ void D3D12Engine::InterfaceDirectX12::GetHardwareAdapter(
         continue;
       }
       if (SUCCEEDED(D3D12CreateDevice(Adapter1.Get(), D3D_FEATURE_LEVEL_11_0, _uuidof(ID3D12Device), nullptr))) {
-        *ptr_Adapter1 = Adapter1.Detach();
+        *ppAdapter1 = Adapter1.Detach();
         return;
       }
     }
   }
 
   for (UINT AdapterIndex = 0;
-    SUCCEEDED(ptr_Factory1->EnumAdapters1(AdapterIndex, &Adapter1));
+    SUCCEEDED(pFactory1->EnumAdapters1(AdapterIndex, &Adapter1));
     AdapterIndex += 1) 
   {
     DXGI_ADAPTER_DESC1 AdapterDescriptor;
@@ -67,7 +67,7 @@ void D3D12Engine::InterfaceDirectX12::GetHardwareAdapter(
     }
 
     if (SUCCEEDED(D3D12CreateDevice(Adapter1.Get(), D3D_FEATURE_LEVEL_11_0, _uuidof(ID3D12Device), nullptr))) {
-      *ptr_Adapter1 = Adapter1.Detach();
+      *ppAdapter1 = Adapter1.Detach();
       return;
     }
   }
