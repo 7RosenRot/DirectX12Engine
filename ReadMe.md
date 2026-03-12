@@ -19,7 +19,7 @@ Initializing the graphics pipeline and drawing the Triangle primitive
 3. Enjoy :D
 
 ## Useful links
-- Microsoft [mini engine](https://github.com/microsoft/DirectX-Graphics-Samples?tab=readme-ov-file) - full implementatioin and much more for education project
+- Microsoft [mini engine](https://github.com/microsoft/DirectX-Graphics-Samples?tab=readme-ov-file) - full implementatioin, real DirectX12 engine
 - Great [theory](https://petitl.fr/articles/creating-a-directx12-3d-engine-when-you-know-nothing#the-graphics-pipeline) - methods, logic, and architecture are described in detail
 - A wonderful [course](https://www.braynzarsoft.net/viewtutorial/q16390-04-directx-12-braynzar-soft-tutorials), quite complete and detailed. It also provides open source code that you can run and see how it works in practice
 
