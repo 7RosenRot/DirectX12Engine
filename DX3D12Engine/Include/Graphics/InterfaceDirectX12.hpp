@@ -18,6 +18,8 @@ namespace D3D12Engine {
     virtual void OnUpdate() = 0;
     virtual void OnDestroy() = 0;
 
+    void GetWindowHeight(UINT newHeight) { m_WindowHeight = newHeight; }
+
     UINT GetWindowHeight() { return m_WindowHeight; }
     UINT GetWindowWidth() { return m_WindowWidth; }
     const WCHAR* GetWindowName() { return m_WindowName.c_str(); }
@@ -29,9 +31,6 @@ namespace D3D12Engine {
     std::wstring m_WindowName = L"";
     UINT m_WindowHeight{0};
     UINT m_WindowWidth{0};
-
-    float m_Coefficient{0.F};
-    float m_timeRatio{0.F};
 
     std::wstring m_assetPath = L"";
 

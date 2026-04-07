@@ -9,7 +9,7 @@
 D3D12Engine::DirectX12Graphics::DirectX12Graphics(UINT WindowHeight, UINT WindowWidth, std::wstring WindowName) :
   InterfaceDirectX12(WindowHeight, WindowWidth, WindowName),
   m_viewPort(0.F, 0.F, static_cast<float>(m_WindowWidth), static_cast<float>(m_WindowHeight)),
-  m_scissorRect(0, 0, static_cast<float>(m_WindowWidth), static_cast<float>(m_WindowHeight))
+  m_scissorRect(0, 0, m_WindowWidth, m_WindowHeight)
 {}
 
 D3D12Engine::DirectX12Graphics::~DirectX12Graphics() {}
@@ -293,6 +293,7 @@ void D3D12Engine::DirectX12Graphics::LoadAssets() {
     IID_PPV_ARGS(&m_indexBufferUploadHeap)
   );
 
+  m_cmdAllocator->Reset();
   m_cmdList->Reset(m_cmdAllocator.Get(), m_pipelineState.Get());
 
   D3D12_SUBRESOURCE_DATA indexData = {};
@@ -304,7 +305,7 @@ void D3D12Engine::DirectX12Graphics::LoadAssets() {
   CD3DX12_RESOURCE_BARRIER transitionBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
     m_indexBuffer.Get(),
     D3D12_RESOURCE_STATE_COPY_DEST,
-    D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER
+    D3D12_RESOURCE_STATE_INDEX_BUFFER
   );
 
   m_cmdList->ResourceBarrier(1, &transitionBarrier);
@@ -321,6 +322,8 @@ void D3D12Engine::DirectX12Graphics::LoadAssets() {
   m_indexBufferView.BufferLocation = m_indexBuffer->GetGPUVirtualAddress();
   m_indexBufferView.Format = DXGI_FORMAT_R32_UINT;
   m_indexBufferView.SizeInBytes = static_cast<UINT>(indexBufferSize);
+
+  /* Extending to index buffer */
 
   m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence));
   m_fenceValue = 1;
