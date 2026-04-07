@@ -1,4 +1,7 @@
 #include <Include/Graphics/InterfaceDirectX12.hpp>
+#include <filesystem>
+#include <iostream>
+#include <chrono>
 
 #include <chrono>
 #include <iostream>
@@ -9,19 +12,7 @@ D3D12Engine::InterfaceDirectX12::InterfaceDirectX12(UINT WindowHeight, UINT Wind
   m_WindowWidth(WindowWidht),
   m_WindowName(WindowName)
 {
-  std::wstring assetPath = std::filesystem::current_path().wstring();
-  std::wstring buffer(assetPath.begin(), assetPath.end());
-  m_assetPath = buffer;
-
-  m_Coefficient = static_cast<float>(WindowWidht) / static_cast<float>(WindowHeight);
-}
-
-float D3D12Engine::InterfaceDirectX12::GetElapsedSeconds() {
-  static const auto startTime = std::chrono::high_resolution_clock::now();
-  auto currentTime = std::chrono::high_resolution_clock::now();
-  std::chrono::duration<float> elapsed = currentTime - startTime;
-
-  return elapsed.count();
+  m_assetPath = std::filesystem::current_path().wstring();
 }
 
 _Use_decl_annotations_

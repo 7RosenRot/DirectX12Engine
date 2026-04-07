@@ -82,6 +82,7 @@ void D3D12Engine::DirectX12Graphics::LoadPipeline() {
     }
   }
 #endif
+
   Microsoft::WRL::ComPtr<IDXGIFactory4> factory4;
   CreateDXGIFactory2(DXGIFactoryFlags, IID_PPV_ARGS(&factory4));
 

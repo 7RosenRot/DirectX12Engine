@@ -25,8 +25,6 @@ namespace D3D12Engine {
 
   protected:
     void GetHardwareAdapter(_In_ IDXGIFactory1* pFactory1, _Outptr_opt_result_maybenull_ IDXGIAdapter1** ppAdapter1, bool requestHighPerfomanceAdapter);
-    
-    float GetElapsedSeconds();
 
     std::wstring m_WindowName = L"";
     UINT m_WindowHeight{0};

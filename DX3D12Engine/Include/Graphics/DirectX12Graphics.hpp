@@ -8,6 +8,11 @@
 #include <d3dcompiler.h>
 #include <DirectXMath.h>
 
+#include <d3dcompiler.h>
+#include <DirectXMath.h>
+#include <exception>
+#include <stdexcept>
+
 namespace D3D12Engine {
   class DirectX12Graphics : public InterfaceDirectX12 {
   public:
