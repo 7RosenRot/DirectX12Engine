@@ -10,10 +10,6 @@ int main(void) {
 
   D3D12Engine::Window MyApplication;
 
-<<<<<<< HEAD
-    return 0;
-}
-=======
   try {
     MyApplication.Run(&WinodowParameters, hInstance, m_CmdShow);
   } catch (const std::runtime_error& error) {
@@ -26,4 +22,3 @@ int main(void) {
 
   return 0;
 }
->>>>>>> 0b07bfd814b1755b032d4af1ab33c737d90cb5b2

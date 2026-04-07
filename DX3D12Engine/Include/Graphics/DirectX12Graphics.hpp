@@ -1,6 +1,9 @@
 #pragma once
+
 #include <Include/Window/Window.hpp>
 #include <Include/Graphics/InterfaceDirectX12.hpp>
+#include <Include/Graphics/GPUResource.hpp>
+#include <Include/Graphics/GraphicsContext.hpp>
 
 #include <d3dcompiler.h>
 #include <DirectXMath.h>
@@ -25,7 +28,7 @@ namespace D3D12Engine {
     static const UINT m_frameCount{2};
     UINT m_frameIndex{0};
     Microsoft::WRL::ComPtr<IDXGISwapChain3> m_swapChain;
-    Microsoft::WRL::ComPtr<ID3D12Resource> m_renderTargets[m_frameCount];
+    GPUResource m_renderTargetsResources[m_frameCount];
     
     Microsoft::WRL::ComPtr<ID3D12Device> m_device;
     Microsoft::WRL::ComPtr<ID3D12CommandQueue> m_cmdQueue;

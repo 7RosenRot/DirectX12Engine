@@ -1,4 +1,6 @@
 #include <Include/Graphics/DirectX12Graphics.hpp>
+#include <Include/Graphics/GPUResource.hpp>
+#include <Include/Graphics/GraphicsContext.hpp>
 
 #include <filesystem>
 #include <exception>
@@ -18,14 +20,47 @@ void D3D12Engine::DirectX12Graphics::OnInitialize() {
   LoadAssets();
 }
 
+// DirectX12Graphics.cpp
+
 void D3D12Engine::DirectX12Graphics::OnRender() {
-  FillCommandList();
-
+  GraphicsContext context(m_cmdList.Get());
+  
+  m_cmdAllocator->Reset();
+  m_cmdList->Reset(m_cmdAllocator.Get(), m_pipelineState.Get());
+  
+  context.SetGraphicsRootSignature(m_rootSignature.Get());
+  
+  context.SetViewports(1, &m_viewPort);
+  context.SetScissorRects(1, &m_scissorRect);
+  context.TransitionResource(m_renderTargetsResources[m_frameIndex], D3D12_RESOURCE_STATE_RENDER_TARGET);
+  
+  context.FlushResourceBarriers(); 
+  
+  CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(
+    m_rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart(),
+    m_frameIndex,
+    m_rtvDescriptorSize
+  );
+  context.GetCommandList()->OMSetRenderTargets(1, &rtvHandle, false, nullptr);
+  
+  const float bgColor[] = {0.1F, 0.1F, 0.1F, 1.F};
+  context.GetCommandList()->ClearRenderTargetView(rtvHandle, bgColor, 0, nullptr);
+  
+  context.SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+  context.SetVertexBuffer(0, m_vertexBufferView);
+  
+  context.SetIndexBuffer(m_indexBufferView);
+  context.DrawIndexedInstanced(12, 1, 0, 0, 0);
+  context.TransitionResource(m_renderTargetsResources[m_frameIndex], D3D12_RESOURCE_STATE_PRESENT);
+  
+  context.FlushResourceBarriers(); 
+  context.Close();
+  
   ID3D12CommandList* ptr_cmdLists[] = { m_cmdList.Get() };
+  
   m_cmdQueue->ExecuteCommandLists(_countof(ptr_cmdLists), ptr_cmdLists);
-
   m_swapChain->Present(1, 0);
-
+  
   WaitForPreviousFrame();
 }
 
@@ -106,8 +141,11 @@ void D3D12Engine::DirectX12Graphics::LoadPipeline() {
 
   CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
   for (UINT frame = 0; frame < m_frameCount; frame += 1) {
-    m_swapChain->GetBuffer(frame, IID_PPV_ARGS(&m_renderTargets[frame]));
-    m_device->CreateRenderTargetView(m_renderTargets[frame].Get(), nullptr, rtvHandle);
+    Microsoft::WRL::ComPtr<ID3D12Resource> backBuffer;
+    m_swapChain->GetBuffer(frame, IID_PPV_ARGS(&backBuffer));
+    m_renderTargetsResources[frame].CreateFromSwapChain(backBuffer);
+
+    m_device->CreateRenderTargetView(m_renderTargetsResources[frame].GetResource(), nullptr, rtvHandle);
     rtvHandle.Offset(1, m_rtvDescriptorSize);
   }
 
@@ -305,7 +343,7 @@ void D3D12Engine::DirectX12Graphics::FillCommandList() {
   CD3DX12_RESOURCE_BARRIER transitionBarier{};
 
   transitionBarier = CD3DX12_RESOURCE_BARRIER::Transition(
-    m_renderTargets[m_frameIndex].Get(), 
+    m_renderTargetsResources[m_frameIndex].GetResource(), 
     D3D12_RESOURCE_STATE_PRESENT, 
     D3D12_RESOURCE_STATE_RENDER_TARGET
   );
@@ -330,7 +368,7 @@ void D3D12Engine::DirectX12Graphics::FillCommandList() {
   m_cmdList->DrawIndexedInstanced(12, 1, 0, 0, 0);
 
   transitionBarier = CD3DX12_RESOURCE_BARRIER::Transition(
-    m_renderTargets[m_frameIndex].Get(), 
+    m_renderTargetsResources[m_frameIndex].GetResource(), 
     D3D12_RESOURCE_STATE_RENDER_TARGET, 
     D3D12_RESOURCE_STATE_PRESENT
   );
