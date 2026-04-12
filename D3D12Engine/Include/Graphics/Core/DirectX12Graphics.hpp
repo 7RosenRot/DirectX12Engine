@@ -4,10 +4,11 @@
 #include <DirectXMath.h>
 
 #include <Include/Window/Window.hpp>
-#include <Include/Graphics/Core/InterfaceDirectX12.hpp>
 
-#include <Include/Graphics/Pipeline/CommandQueue.hpp>
+// DirectX include path
+#include <Include/Graphics/Core/InterfaceDirectX12.hpp>
 #include <Include/Graphics/Core/CommandContext.hpp>
+#include <Include/Graphics/Pipeline/CommandQueue.hpp>
 #include <Include/Graphics/Pipeline/Display.hpp>
 #include <Include/Graphics/Pipeline/RootSignature.hpp>
 #include <Include/Graphics/Pipeline/PipelineState.hpp>
@@ -17,11 +18,14 @@
 namespace D3D12Engine {
   class DirectX12Graphics : public InterfaceDirectX12 {
    public:
-    DirectX12Graphics(UINT WindowWidth, UINT WindowHeight, std::wstring WindowName);
+    DirectX12Graphics(
+      UINT WindowWidth, UINT WindowHeight, UINT AspectWidth, UINT AspectHeight, std::wstring WindowName
+    );
     virtual ~DirectX12Graphics();
 
     void OnInitialize() override;
     void OnRender() override;
+    void OnResize(UINT WindowWidth, UINT WindowHeight) override;
     void OnUpdate() override;
     void OnDestroy() override;
   

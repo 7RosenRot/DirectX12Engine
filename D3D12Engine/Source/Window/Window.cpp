@@ -21,6 +21,16 @@ LRESULT CALLBACK D3D12Engine::Window::WndProc(HWND hwnd, UINT msg, WPARAM wParam
       setBorders->ptMinTrackSize.y = 250;
     }
     return 0;
+  case WM_SIZE: {
+      UINT WindowWidth = LOWORD(lParam);
+      UINT WindowHeight = HIWORD(lParam);
+
+      renderWindow->OnResize(WindowWidth, WindowHeight);
+
+      renderWindow->OnUpdate();
+      renderWindow->OnRender();
+    }
+    return 0;
   case WM_PAINT: {
       if (renderWindow) {
         renderWindow->OnUpdate();
@@ -42,7 +52,6 @@ LRESULT CALLBACK D3D12Engine::Window::WndProc(HWND hwnd, UINT msg, WPARAM wParam
 D3D12Engine::Window::Window() {}
 
 void D3D12Engine::Window::Run(InterfaceDirectX12* InterfaceDirectX12, HINSTANCE hInstance, int CmdShow) {
-  
   WNDCLASSEX wndClass{0};
 
   wndClass.cbSize = sizeof(WNDCLASSEX);
@@ -51,10 +60,10 @@ void D3D12Engine::Window::Run(InterfaceDirectX12* InterfaceDirectX12, HINSTANCE 
 
   wndClass.style = CS_HREDRAW | CS_VREDRAW;
   wndClass.hbrBackground = (HBRUSH)COLOR_WINDOW;
-  wndClass.hIcon = LoadIcon(GetModuleHandle(nullptr), MAKEINTRESOURCE(IDI_APP_ICON));
-  wndClass.hIconSm = LoadIcon(GetModuleHandle(nullptr), MAKEINTRESOURCE(IDI_APP_ICON));
   wndClass.hCursor = LoadCursor(NULL, IDC_ARROW);
-  wndClass.hInstance = NULL;
+  wndClass.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_APP_ICON));
+  wndClass.hIconSm = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_APP_ICON));
+  wndClass.hInstance = hInstance;
 
   wndClass.lpfnWndProc = &WndProc;
 

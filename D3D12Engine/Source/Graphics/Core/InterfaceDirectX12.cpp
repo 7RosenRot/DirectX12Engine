@@ -3,12 +3,16 @@
 
 #include <Include/Graphics/Core/InterfaceDirectX12.hpp>
 
-D3D12Engine::InterfaceDirectX12::InterfaceDirectX12(UINT WindowHeight, UINT WindowWidht, std::wstring WindowName) :
-  m_WindowHeight(WindowHeight), 
-  m_WindowWidth(WindowWidht),
+D3D12Engine::InterfaceDirectX12::InterfaceDirectX12(
+  UINT WindowWidht, UINT WindowHeight, UINT AspectWidth, UINT AspectHeight, std::wstring WindowName
+) :
+  m_WindowWidth(WindowWidht), m_WindowHeight(WindowHeight),
+  m_AspectWidth(AspectWidth), m_AspectHeight(AspectHeight),
   m_WindowName(WindowName)
 {
   m_assetPath = std::filesystem::current_path().wstring();
+
+  m_AspectRatio = static_cast<float>(AspectWidth) / static_cast<float>(AspectHeight);
 }
 
 _Use_decl_annotations_

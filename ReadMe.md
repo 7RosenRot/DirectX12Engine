@@ -15,14 +15,23 @@ Initializing the graphics pipeline and drawing the Triangle primitive
 
 ## Launch
 1. Clone Git repository
-2. Run `PreView.ps1` script
+``PowerShell
+git clone https://github.com/7RosenRot/DirectX12Engine.git
+``
+2. Build the application
+``PowerShell
+cmake -S . -B build
+
+cmake --build build --parallel --config=Release
+``
 3. Enjoy :D
+``PowerShell
+./build/Release/Render.exe
+``
+
+## Inspired by
+- Microsoft [mini engine](https://github.com/microsoft/DirectX-Graphics-Samples?tab=readme-ov-file) - full implementatioin, real DirectX12 engine
 
 ## Useful links
-- Microsoft [mini engine](https://github.com/microsoft/DirectX-Graphics-Samples?tab=readme-ov-file) - full implementatioin, real DirectX12 engine
 - Great [theory](https://petitl.fr/articles/creating-a-directx12-3d-engine-when-you-know-nothing#the-graphics-pipeline) - methods, logic, and architecture are described in detail
 - A wonderful [course](https://www.braynzarsoft.net/viewtutorial/q16390-04-directx-12-braynzar-soft-tutorials), quite complete and detailed. It also provides open source code that you can run and see how it works in practice
-
-## References
-1. https://github.com/CanYouCatchMe01/DirectX12Model3D
-3. https://github.com/7RosenRot/DirectX12Engine-old
