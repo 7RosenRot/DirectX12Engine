@@ -17,6 +17,8 @@ Initializing the graphics pipeline and drawing the Triangle primitive
 1. Clone Git repository
 ```bash
 git clone https://github.com/7RosenRot/DirectX12Engine.git
+
+git checkout develop
 ```
 2. Build the application
 ```bash
