@@ -1,4 +1,4 @@
-# D3D12Engine
+# D3D12Engine - 3D is available now. For more detailes touch and clone [*develop*](https://github.com/7RosenRot/DirectX12Engine/tree/develop) branch 
 
 Initializing the graphics pipeline and drawing the Triangle primitive
 
