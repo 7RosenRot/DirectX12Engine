@@ -1,10 +1,11 @@
 #pragma once
-#include <Include/Graphics/d3dx12.h>
 
+#include <d3d12.h>
+#include <dxgi1_6.h>
 #include <wtypes.h>
 #include <string>
-#include <dxgi1_6.h>
-#include <d3d12.h>
+
+#include <Include\Libraries\d3dx12.h>
 
 namespace D3D12Engine {
   class InterfaceDirectX12 {
