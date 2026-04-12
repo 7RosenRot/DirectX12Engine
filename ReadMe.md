@@ -15,17 +15,17 @@ Initializing the graphics pipeline and drawing the Triangle primitive
 
 ## Launch
 1. Clone Git repository
-```PowerShell
+```bash
 git clone https://github.com/7RosenRot/DirectX12Engine.git
 ```
 2. Build the application
-```PowerShell
+```bash
 cmake -S . -B build
 
 cmake --build build --parallel --config=Release
 ```
 3. Enjoy :D
-```PowerShell
+```bash
 ./build/Release/Render.exe
 ```
 
