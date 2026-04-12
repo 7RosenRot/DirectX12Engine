@@ -1,5 +1,7 @@
 # D3D12Engine
 
+# 3D is available now. For more detailes toush [*develop*](https://github.com/7RosenRot/DirectX12Engine/tree/develop) branch 
+
 Initializing the graphics pipeline and drawing the Triangle primitive
 
 <p align="center">
