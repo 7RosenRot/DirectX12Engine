@@ -5,7 +5,7 @@
 #include <wtypes.h>
 #include <string>
 
-#include <Include/Graphics/d3dx12.h>
+#include <Include\Libraries\d3dx12.h>
 
 namespace D3D12Engine {
   class InterfaceDirectX12 {
