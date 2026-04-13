@@ -1,7 +1,7 @@
 #pragma once
-#include <Include/Graphics/Core/InterfaceDirectX12.hpp>
-
 #include <windows.h>
+
+#include <Include/Graphics/Core/InterfaceDirectX12.hpp>
 
 namespace D3D12Engine {
   class Window {

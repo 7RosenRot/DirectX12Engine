@@ -9,8 +9,10 @@
 #include <Include/Graphics/Pipeline/Display.hpp>
 #include <Include/Graphics/Scene/Model.hpp>
 
-D3D12Engine::DirectX12Graphics::DirectX12Graphics(UINT WindowHeight, UINT WindowWidth, std::wstring WindowName) :
-  InterfaceDirectX12(WindowHeight, WindowWidth, WindowName),
+D3D12Engine::DirectX12Graphics::DirectX12Graphics(
+  UINT WindowWidth, UINT WindowHeight, UINT AspectWidth, UINT AspectHeight, std::wstring WindowName
+) :
+  InterfaceDirectX12(WindowWidth, WindowHeight, AspectWidth, AspectHeight, WindowName),
   m_viewPort(0.F, 0.F, static_cast<float>(m_WindowWidth), static_cast<float>(m_WindowHeight)),
   m_scissorRect(0, 0, m_WindowWidth, m_WindowHeight)
 {}
@@ -48,8 +50,10 @@ void D3D12Engine::DirectX12Graphics::OnInitialize() {
 }
 
 void D3D12Engine::DirectX12Graphics::OnRender() {
+  // ↓ Prepare Pipeline ↓
   m_cmdQueue->Flush();
   m_cmdContext->Reset();
+  // ↑ Prepare Pipeline ↑
   
   // ↓ PipelineState & RootSignature ↓
   m_cmdContext->SetPipelineState(m_pipelineState.GetPipelineState());
@@ -94,6 +98,34 @@ void D3D12Engine::DirectX12Graphics::OnRender() {
   // ↑ Draw ↑
   
   m_cmdQueue->WaitForPreviousFrame(fenceValue);
+}
+
+void D3D12Engine::DirectX12Graphics::OnResize(UINT WindowWidth, UINT WindowHeight) {
+  m_cmdQueue->Flush();
+
+  m_display->Resize(m_device.Get(), m_depthBuffer, WindowWidth, WindowHeight);
+
+  const float AspectRatio = GetAspectRatio();
+
+  float viewportWidth = static_cast<float>(WindowWidth);
+  float viewportHeight = viewportWidth / AspectRatio;
+  
+  if (viewportHeight > WindowHeight) {
+    viewportHeight = static_cast<float>(WindowHeight);
+    viewportWidth = viewportHeight * AspectRatio;
+  }
+  
+  float offsetX = (WindowWidth - viewportWidth) * 0.5F;
+  float offsetY = (WindowHeight - viewportHeight) * 0.5F;
+  
+  m_viewPort = CD3DX12_VIEWPORT(
+    offsetX, offsetY,
+    viewportWidth, viewportHeight
+  );
+  m_scissorRect = CD3DX12_RECT(
+    static_cast<long>(offsetX), static_cast<long>(offsetY),
+    static_cast<long>(offsetX + viewportWidth), static_cast<long>(offsetY + viewportHeight)
+  );
 }
 
 void D3D12Engine::DirectX12Graphics::OnUpdate() {
@@ -186,7 +218,7 @@ void D3D12Engine::DirectX12Graphics::LoadAssets() {
   HRESULT hResult{0};
 
   std::wstring vtxShaderPath = D3D12Engine::InterfaceDirectX12::GetAssetPath(L"VertexShader.hlsl");
-  if (!std::filesystem::exists(vtxShaderPath)) { throw std::runtime_error("Shaders files do not exist!"); }
+  if (!std::filesystem::exists(vtxShaderPath)) { OutputDebugStringW((L"ERROR: File not found - " + vtxShaderPath + L'\n').c_str()); }
   
   Microsoft::WRL::ComPtr<ID3DBlob> vertexShader;
   Microsoft::WRL::ComPtr<ID3DBlob> vtxErrorBuffer;
@@ -208,7 +240,7 @@ void D3D12Engine::DirectX12Graphics::LoadAssets() {
   }
 
   std::wstring pxlShaderPath = D3D12Engine::InterfaceDirectX12::GetAssetPath(L"PixelShader.hlsl");
-  if (!std::filesystem::exists(pxlShaderPath)) { throw std::runtime_error("Shaders files do not exist!"); }
+  if (!std::filesystem::exists(pxlShaderPath)) { OutputDebugStringW((L"ERROR: File not found - " + pxlShaderPath + L'\n').c_str()); }
 
   Microsoft::WRL::ComPtr<ID3DBlob> pixelShader;
   Microsoft::WRL::ComPtr<ID3DBlob> pxlErrorBuffer;
@@ -247,7 +279,7 @@ void D3D12Engine::DirectX12Graphics::LoadAssets() {
   m_pipelineState.Finalize(m_device.Get());
 
   m_cmdContext->Reset();
-  m_Model->LoadObj("DX3D12Engine\\Assets\\Model.obj", m_device.Get(), *m_cmdContext);
+  m_Model->LoadObj("Assets\\Model.obj", m_device.Get(), *m_cmdContext);
   m_cmdContext->Close();
 
   UINT64 fenceValue = m_cmdQueue->ExecuteCommandList(m_cmdContext->GetCommandList());

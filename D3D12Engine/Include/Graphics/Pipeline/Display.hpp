@@ -5,6 +5,7 @@
 
 #include <Include/Graphics/Core/GraphicsCore.hpp>
 #include <Include/Graphics/Resources/BackBuffer.hpp>
+#include <Include/Graphics/Resources/DepthBuffer.hpp>
 
 namespace D3D12Engine {
   class Display {
@@ -18,7 +19,7 @@ namespace D3D12Engine {
 
     void Present();
     
-    void Resize(ID3D12Device* pDevice, UINT WindowWidth, UINT WindowHeight);
+    void Resize(ID3D12Device* pDevice, DepthBuffer& pDepthBuffer, UINT WindowWidth, UINT WindowHeight);
     // ↑ SwapChain (Display) interaction ↑
 
     // ↓ Getters ↓

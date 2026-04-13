@@ -1,4 +1,5 @@
 #include <Include/Graphics/Pipeline/Display.hpp>
+#include <Include/Graphics/Resources/DepthBuffer.hpp>
 
 void D3D12Engine::Display::Initialize(ID3D12Device* pDevice, IDXGIFactory4* pFactory, ID3D12CommandQueue* pCmdQueue,
   HWND hwnd, UINT WindowWidth, UINT WindowHeight)
@@ -54,19 +55,31 @@ void D3D12Engine::Display::Initialize(ID3D12Device* pDevice, IDXGIFactory4* pFac
 
 void D3D12Engine::Display::Present() {
   m_swapChain->Present(1, 0);
+  
   m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 }
 
-void D3D12Engine::Display::Resize(ID3D12Device* pDevice, UINT WindowWidth, UINT WindowHeight) {
+void D3D12Engine::Display::Resize(ID3D12Device* pDevice, DepthBuffer& pDepthBuffer, UINT WindowWidth, UINT WindowHeight) {
   for (UINT frame = 0 ; frame < GraphicsCore::m_frameCount; frame += 1) {
     m_renderTargetsResources[frame].Destroy();
   }
 
+  DXGI_SWAP_CHAIN_DESC desc = {};
+  m_swapChain->GetDesc(&desc);
+  
   m_swapChain->ResizeBuffers(
     GraphicsCore::m_frameCount,
     WindowWidth, WindowHeight,
     GraphicsCore::BackBufferFormat,
     0
+  );
+
+  pDepthBuffer.Create(
+    pDevice,
+    L"MainDepthBuffer",
+    WindowWidth,
+    WindowHeight,
+    DXGI_FORMAT_D32_FLOAT
   );
 
   m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();

@@ -1,35 +1,25 @@
-# -- general properties -- #
 cmake_minimum_required(VERSION 3.20)
-set(ProjectName DirectX12Engine)
-project(${ProjectName} CXX)
+set(This Render)
+
+project(${This} CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-enable_language(CXX)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-# -- set paths -- #
-set(ENGINE_ROOT "${CMAKE_SOURCE_DIR}/DX3D12Engine")
-
-file(GLOB_RECURSE ENGINE_SOURCE "${ENGINE_ROOT}/Source/*.cpp")
-
-set(RESOURCE_FILES "${CMAKE_SOURCE_DIR}/DX3D12Engine/Assets/resource/resource.rc")
-set(MAIN_APP "${CMAKE_SOURCE_DIR}/Main Application/main.cpp" ${RESOURCE_FILES})
-
-# -- source files -- #
-add_executable(${ProjectName}
-    ${MAIN_APP}
-    ${ENGINE_SOURCE}
+add_executable(${This}
+  "${CMAKE_SOURCE_DIR}/MainApplication/main.cpp"
+  "${CMAKE_SOURCE_DIR}/Assets/resource/resource.rc"
 )
 
-# -- include files -- #
-target_include_directories(${ProjectName}
-PRIVATE
-    ${ENGINE_ROOT}
+target_link_libraries(${This} PRIVATE D3D12Engine)
+set_target_properties(${This} PROPERTIES WIN32_EXECUTABLE TRUE)
+
+target_include_directories(${This} PRIVATE
+  "${CMAKE_SOURCE_DIR}/"
+  "${CMAKE_SOURCE_DIR}/MainApplication/"
+  "${CMAKE_SOURCE_DIR}/D3D12Engine/Include/Graphics"
+  "${CMAKE_SOURCE_DIR}/Assets/resource/*.rc"
 )
 
-# -- link libaries -- #
-target_link_libraries(${ProjectName}
-PRIVATE
-    d3d12 dxgi dxguid d3dcompiler
-)
+add_subdirectory(D3D12Engine)
