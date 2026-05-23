@@ -4,9 +4,11 @@
 #include <Assets/resource/resource.h>
 #include <Include/Window/Window.hpp>
 #include <Include/Graphics/Core/DirectX12Graphics.hpp>
+#include <Include/Graphics/Scene/Input.hpp>
 
 LRESULT CALLBACK D3D12Engine::Window::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
   DirectX12Graphics* renderWindow = reinterpret_cast<DirectX12Graphics*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
+  D3D12Engine::Input::Initialize(hwnd);
 
   switch (msg) {
   case WM_CREATE: {
@@ -31,6 +33,32 @@ LRESULT CALLBACK D3D12Engine::Window::WndProc(HWND hwnd, UINT msg, WPARAM wParam
       renderWindow->OnRender();
     }
     return 0;
+  case WM_KEYDOWN: {
+      if (wParam == VK_ESCAPE) {
+        D3D12Engine::Input::SetMouseLock(false);
+      }
+
+      D3D12Engine::Input::SetStatusKey(static_cast<UINT8>(wParam), true);
+    }
+    return 0;
+
+  case WM_KEYUP: {
+      D3D12Engine::Input::SetStatusKey(static_cast<UINT8>(wParam), false);
+    }
+    return 0;
+
+  case WM_LBUTTONDOWN: {
+      D3D12Engine::Input::SetMouseLock(true);
+    }
+    return 0;
+
+  case WM_MOUSEMOVE: {
+      if (D3D12Engine::Input::IsMouseLocked()) {
+        D3D12Engine::Input::OnMouseMove(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+      }
+    }
+    return 0;
+
   case WM_PAINT: {
       if (renderWindow) {
         renderWindow->OnUpdate();
@@ -38,10 +66,12 @@ LRESULT CALLBACK D3D12Engine::Window::WndProc(HWND hwnd, UINT msg, WPARAM wParam
       }
     }
     return 0;
+
   case WM_DESTROY: {
       PostQuitMessage(0);
     }
     return 0;
+    
   default:
     return DefWindowProc(hwnd, msg, wParam, lParam);
   }

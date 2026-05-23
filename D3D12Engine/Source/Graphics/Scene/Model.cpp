@@ -92,6 +92,7 @@ bool D3D12Engine::Model::LoadObj(const std::string& filepath, ID3D12Device* devi
   
   return true;
 }
+
 void D3D12Engine::Model::Draw(CommandContext& context) {
   context.TransitionResource(m_VertexBuffer, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
   context.TransitionResource(m_IndexBuffer, D3D12_RESOURCE_STATE_INDEX_BUFFER);

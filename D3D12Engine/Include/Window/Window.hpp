@@ -1,5 +1,6 @@
 #pragma once
-#include <windows.h>
+
+#include <windowsx.h>
 
 #include <Include/Graphics/Core/InterfaceDirectX12.hpp>
 

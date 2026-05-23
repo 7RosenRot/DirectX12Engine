@@ -14,6 +14,7 @@
 #include <Include/Graphics/Pipeline/PipelineState.hpp>
 #include <Include/Graphics/Resources/DepthBuffer.hpp>
 #include <Include/Graphics/Scene/Model.hpp>
+#include <Include/Graphics/Scene/Camera.hpp>
 
 namespace D3D12Engine {
   class DirectX12Graphics : public InterfaceDirectX12 {
@@ -30,23 +31,34 @@ namespace D3D12Engine {
     void OnDestroy() override;
   
    private:
-    Microsoft::WRL::ComPtr<ID3D12Device> m_device;
-    Microsoft::WRL::ComPtr<IDXGIFactory4> factory4;
+    // ↓ Pipeline modules ↓ 
+      Microsoft::WRL::ComPtr<ID3D12Device> m_device;
+      Microsoft::WRL::ComPtr<IDXGIFactory4> factory4;
 
-    std::unique_ptr<CommandQueue> m_cmdQueue;
-    std::unique_ptr<CommandContext> m_cmdContext;
-    std::unique_ptr<Display> m_display;
-    
-    DepthBuffer m_depthBuffer;
-    
-    RootSignature m_rootSignature;
-    GraphicsPSO m_pipelineState{L"Main PipelineStateObject"};
+      std::unique_ptr<CommandQueue> m_cmdQueue;
+      std::unique_ptr<CommandContext> m_cmdContext;
+      std::unique_ptr<Display> m_display;
 
-    CD3DX12_VIEWPORT m_viewPort{};
-    CD3DX12_RECT m_scissorRect{};
+      DepthBuffer m_depthBuffer;
 
-    std::unique_ptr<Model> m_Model;
-    DirectX::XMMATRIX m_DisplacementMatrix;
+      RootSignature m_rootSignature;
+      GraphicsPSO m_pipelineState{L"Main PipelineStateObject"};
+
+      CD3DX12_VIEWPORT m_viewPort{};
+      CD3DX12_RECT m_scissorRect{};
+    // ↑ Pipeline modules ↑
+
+    // ↓ Model ↓
+      std::unique_ptr<Model> m_Model;
+      std::unique_ptr<Model> m_FloorModel;
+
+      DirectX::XMMATRIX m_DisplacementMatrix;
+      DirectX::XMMATRIX m_FloorMatrix;
+    // ↑ Model ↑
+
+    // ↓ Camera ↓
+      std::unique_ptr<Camera> m_Camera;
+    // ↑ Camera ↑
 
     void LoadPipeline();
     void LoadAssets();

@@ -8,6 +8,7 @@
 #include <Include/Graphics/Core/CommandContext.hpp>
 #include <Include/Graphics/Pipeline/Display.hpp>
 #include <Include/Graphics/Scene/Model.hpp>
+#include <Include/Graphics/Scene/Input.hpp>
 
 D3D12Engine::DirectX12Graphics::DirectX12Graphics(
   UINT WindowWidth, UINT WindowHeight, UINT AspectWidth, UINT AspectHeight, std::wstring WindowName
@@ -42,9 +43,10 @@ void D3D12Engine::DirectX12Graphics::OnInitialize() {
   );
   // ↑ Initializing SwapCahin ↑
 
-  // ↓ Initializing Model ↓
-  m_Model = std::make_unique<Model>();
-  // ↑ Initializing Model ↑
+  // ↓ Initializing Camera ↓
+  m_Camera = std::make_unique<Camera>();
+  m_Camera->SetPosition(0.0F, 0.0F, -5.0F);
+  // ↑ Initializing Camera ↑
 
   LoadAssets();
 }
@@ -80,9 +82,12 @@ void D3D12Engine::DirectX12Graphics::OnRender() {
   // ↑ Barrier ↑
 
   m_cmdContext->SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+  
   m_cmdContext->GetCommandList()->SetGraphicsRoot32BitConstants(0, 16, &m_DisplacementMatrix, 0);
-
   m_Model->Draw(*m_cmdContext);
+  
+  m_cmdContext->GetCommandList()->SetGraphicsRoot32BitConstants(0, 16, &m_FloorMatrix, 0);
+  m_FloorModel->Draw(*m_cmdContext);
 
   // ↓ Barrier ↓
   m_cmdContext->TransitionResource(m_display->GetCurrentBackBufferIndex(), D3D12_RESOURCE_STATE_PRESENT);
@@ -126,29 +131,43 @@ void D3D12Engine::DirectX12Graphics::OnResize(UINT WindowWidth, UINT WindowHeigh
     static_cast<long>(offsetX), static_cast<long>(offsetY),
     static_cast<long>(offsetX + viewportWidth), static_cast<long>(offsetY + viewportHeight)
   );
+
+  m_Camera->SetLensProperties(DirectX::XMConvertToRadians(45.0f), AspectRatio, 0.1f, 100.0f);
 }
 
 void D3D12Engine::DirectX12Graphics::OnUpdate() {
+  const float dt = 0.01f;
+  const float speed = 5.0f * dt;
+
+  if (Input::IsKeyDown('W')) { m_Camera->Forward( speed ); }
+  if (Input::IsKeyDown('S')) { m_Camera->Forward(-speed ); }
+  if (Input::IsKeyDown('A')) { m_Camera->Sideway(-speed ); }
+  if (Input::IsKeyDown('D')) { m_Camera->Sideway( speed ); }
+
+  float mouseDx = 0.0f, mouseDy = 0.0f;
+  Input::GetMouseDelta(mouseDx, mouseDy);
+
+  if (mouseDx != 0.0f || mouseDy != 0.0f) {
+    float mouseSensivity = 0.1F;
+    
+    m_Camera->RotateX(DirectX::XMConvertToRadians(mouseDy * mouseSensivity));
+    m_Camera->RotateY(DirectX::XMConvertToRadians(mouseDx * mouseSensivity));
+  }
+
   // ↓ Rotation ↓
   static float angle = 0.0f;
-  angle += 0.01f;
+  angle += 0.00f; // ← Set up rotation speed
+  
+  m_Camera->UpdateMatrixView();
+
+  DirectX::XMMATRIX view = m_Camera->GetMatrixView();
+  DirectX::XMMATRIX projection = m_Camera->GetMatrixProjection();
 
   DirectX::XMMATRIX model = DirectX::XMMatrixRotationY(angle);
-  
-  DirectX::XMVECTOR eye = DirectX::XMVectorSet(0.0f, 0.0f, -3.0f, 0.0f);  // Мы стоим в -2 по Z
-  DirectX::XMVECTOR focus = DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f); // Смотрим в центр
-  DirectX::XMVECTOR up = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);    // Верх — это Y
-  DirectX::XMMATRIX view = DirectX::XMMatrixLookAtLH(eye, focus, up);
-
-  float aspectRatio = static_cast<float>(m_WindowWidth) / static_cast<float>(m_WindowHeight);
-  DirectX::XMMATRIX projection = DirectX::XMMatrixPerspectiveFovLH(
-    DirectX::XMConvertToRadians(45.0f),
-    aspectRatio,
-    0.1f,
-    100.0f
-  );
-
   m_DisplacementMatrix = DirectX::XMMatrixTranspose(model * view * projection);
+  
+  DirectX::XMMATRIX floor = DirectX::XMMatrixTranslation(0.0f, -1.0f, 0.0f);
+  m_FloorMatrix = DirectX::XMMatrixTranspose(floor * view * projection);
   // ↑ Rotation ↑
 }
 
@@ -158,6 +177,8 @@ void D3D12Engine::DirectX12Graphics::OnDestroy() {
   }
 
   m_Model.reset();
+  m_FloorModel.reset();
+  m_Camera.reset();
   m_display.reset();
   m_cmdContext.reset();
   
@@ -279,7 +300,13 @@ void D3D12Engine::DirectX12Graphics::LoadAssets() {
   m_pipelineState.Finalize(m_device.Get());
 
   m_cmdContext->Reset();
-  m_Model->LoadObj("Assets\\Model.obj", m_device.Get(), *m_cmdContext);
+    // ↓ Initializing & Downloading Models ↓
+    m_Model = std::make_unique<Model>();
+    m_Model->LoadObj("Assets\\Model.obj", m_device.Get(), *m_cmdContext);
+
+    m_FloorModel = std::make_unique<Model>();
+    m_FloorModel->LoadObj("Assets\\Plane.obj", m_device.Get(), *m_cmdContext);
+    // ↑ Initializing & Downloading Models ↑
   m_cmdContext->Close();
 
   UINT64 fenceValue = m_cmdQueue->ExecuteCommandList(m_cmdContext->GetCommandList());
