@@ -6,6 +6,8 @@
 #include <string>
 
 // DirectX include path
+#include <Renderer/D3D12Engine/Backend/RHI/Libraries/d3dx12.h>
+
 #include <Framework/Camera/Camera.hpp>
 
 #include <Renderer/IRenderer/IRenderer.hpp>
@@ -22,19 +24,19 @@
 namespace D3D12Engine {
   class DirectX12Graphics : public IRenderer {
    public:
-    DirectX12Graphics(UINT WindowWidth, UINT WindowHeight);
+    DirectX12Graphics();
     ~DirectX12Graphics() override;
 
-    void OnInitialize(HWND hwnd, UINT WindowWidth, UINT WindowHeight) override;
+    void OnInitialize(HWND hwnd, unsigned int WindowWidth, unsigned int WindowHeight) override;
     void OnRender() override;
-    void OnResize(UINT WindowWidth, UINT WindowHeight) override;
+    void OnResize(unsigned int WindowWidth, unsigned int WindowHeight) override;
     void OnUpdate() override;
     void OnDestroy() override;
   
    private:
     // ↓ Window properties ↓ 
-      UINT m_WindowWidth;
-      UINT m_WindowHeight;
+      unsigned int m_WindowWidth;
+      unsigned int m_WindowHeight;
     // ↑ Window properties ↑
 
     // ↓ Pipeline modules ↓ 
@@ -67,6 +69,7 @@ namespace D3D12Engine {
     // ↑ Camera ↑
 
     void GetHardwareAdapter(_In_ IDXGIFactory1* pFactory1, _Outptr_opt_result_maybenull_ IDXGIAdapter1** ppAdapter1, bool requestHighPerfomanceAdapter);
+    
     void LoadPipeline();
     void LoadAssets();
   };

@@ -5,19 +5,14 @@
 
 #include <Renderer/D3D12Engine/Backend/DirectX12Graphics/DirectX12Graphics.hpp>
 
-D3D12Engine::DirectX12Graphics::DirectX12Graphics(
-  UINT WindowWidth, UINT WindowHeight
-) :
-  m_viewPort(0.F, 0.F, static_cast<float>(m_WindowWidth), static_cast<float>(m_WindowHeight)),
-  m_scissorRect(0, 0, m_WindowWidth, m_WindowHeight)
-{}
+D3D12Engine::DirectX12Graphics::DirectX12Graphics() {}
 
 D3D12Engine::DirectX12Graphics::~DirectX12Graphics() {
   OnDestroy();
 }
 
 _Use_decl_annotations_
-void DirectX12Graphics::GetHardwareAdapter(
+void D3D12Engine::DirectX12Graphics::GetHardwareAdapter(
   _In_ IDXGIFactory1* pFactory1,
   _Outptr_opt_result_maybenull_ IDXGIAdapter1** ppAdapter1,
   bool requestHighPerfomanceAdapter
@@ -66,8 +61,45 @@ void DirectX12Graphics::GetHardwareAdapter(
   }
 }
 
-void D3D12Engine::DirectX12Graphics::OnInitialize() {
-  LoadPipeline();
+void D3D12Engine::DirectX12Graphics::OnInitialize(HWND hwnd, unsigned int WindowWidth, unsigned int WindowHeight) {
+  m_WindowWidth = WindowWidth;
+  m_WindowHeight = WindowHeight;
+
+  m_viewPort = CD3DX12_VIEWPORT(0.0f, 0.0f, static_cast<float>(WindowWidth), static_cast<float>(WindowHeight));
+  m_scissorRect = CD3DX12_RECT(0, 0, static_cast<long>(WindowWidth), static_cast<long>(WindowHeight));
+
+  UINT DXGIFactoryFlags{0};
+#if defined(_DEBUG)
+  {
+    Microsoft::WRL::ComPtr<ID3D12Debug> debugController;
+    if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController)))) {
+      debugController->EnableDebugLayer();
+      DXGIFactoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
+    }
+  }
+#endif
+
+  CreateDXGIFactory2(DXGIFactoryFlags, IID_PPV_ARGS(&factory4));
+
+  if (m_useWarpAdapter) {
+    Microsoft::WRL::ComPtr<IDXGIAdapter> warpAdapter;
+    
+    factory4->EnumWarpAdapter(IID_PPV_ARGS(&warpAdapter));
+    D3D12CreateDevice(warpAdapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_device));
+  }
+  else {
+    Microsoft::WRL::ComPtr<IDXGIAdapter1> hardwareAdapter;
+    
+    GetHardwareAdapter(factory4.Get(), &hardwareAdapter, true);
+    D3D12CreateDevice(hardwareAdapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_device));
+  }
+
+  m_depthBuffer.Create(
+    m_device.Get(),
+    L"MainDepthBuffer",
+    m_WindowWidth, m_WindowHeight,
+    DXGI_FORMAT_D32_FLOAT
+  );
 
   // ↓ Initializing CommandQueue ↓
   m_cmdQueue = std::make_unique<CommandQueue>(m_device.Get(), D3D12_COMMAND_LIST_TYPE_DIRECT);
@@ -235,41 +267,6 @@ void D3D12Engine::DirectX12Graphics::OnDestroy() {
   }
 }
 
-void D3D12Engine::DirectX12Graphics::LoadPipeline() {
-  UINT DXGIFactoryFlags{0};
-#if defined(_DEBUG)
-  {
-    Microsoft::WRL::ComPtr<ID3D12Debug> debugController;
-    if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController)))) {
-      debugController->EnableDebugLayer();
-      DXGIFactoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
-    }
-  }
-#endif
-
-  CreateDXGIFactory2(DXGIFactoryFlags, IID_PPV_ARGS(&factory4));
-
-  if (m_useWarpAdapter) {
-    Microsoft::WRL::ComPtr<IDXGIAdapter> warpAdapter;
-    
-    factory4->EnumWarpAdapter(IID_PPV_ARGS(&warpAdapter));
-    D3D12CreateDevice(warpAdapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_device));
-  }
-  else {
-    Microsoft::WRL::ComPtr<IDXGIAdapter1> hardwareAdapter;
-    
-    GetHardwareAdapter(factory4.Get(), &hardwareAdapter, true);
-    D3D12CreateDevice(hardwareAdapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_device));
-  }
-
-  m_depthBuffer.Create(
-    m_device.Get(),
-    L"MainDepthBuffer",
-    m_WindowWidth, m_WindowHeight,
-    DXGI_FORMAT_D32_FLOAT
-  );
-}
-
 void D3D12Engine::DirectX12Graphics::LoadAssets() {
   m_rootSignature.Reset(1);
   m_rootSignature[0].InitAsConstants(0, 16, D3D12_SHADER_VISIBILITY_VERTEX);
@@ -284,7 +281,7 @@ void D3D12Engine::DirectX12Graphics::LoadAssets() {
   // ↓ Shader Compilation ↓
   HRESULT hResult{0};
 
-  std::wstring vtxShaderPath = D3D12Engine::InterfaceDirectX12::GetAssetPath(L"VertexShader.hlsl");
+  std::wstring vtxShaderPath = L"Assets/Shaders/D3D12/VertexShader.hlsl";
   if (!std::filesystem::exists(vtxShaderPath)) { OutputDebugStringW((L"ERROR: File not found - " + vtxShaderPath + L'\n').c_str()); }
   
   Microsoft::WRL::ComPtr<ID3DBlob> vertexShader;
@@ -306,7 +303,7 @@ void D3D12Engine::DirectX12Graphics::LoadAssets() {
     throw std::runtime_error("Vertex Shader compilation has failed!");
   }
 
-  std::wstring pxlShaderPath = D3D12Engine::InterfaceDirectX12::GetAssetPath(L"PixelShader.hlsl");
+  std::wstring pxlShaderPath = L"Assets/Shaders/D3D12/PixelShader.hlsl";
   if (!std::filesystem::exists(pxlShaderPath)) { OutputDebugStringW((L"ERROR: File not found - " + pxlShaderPath + L'\n').c_str()); }
 
   Microsoft::WRL::ComPtr<ID3DBlob> pixelShader;
