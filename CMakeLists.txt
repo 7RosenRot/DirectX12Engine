@@ -1,25 +1,19 @@
 cmake_minimum_required(VERSION 3.20)
-set(This Render)
+project(GameEngineWorkspace LANGUAGES CXX)
 
-project(${This} CXX)
-
+# Настройка стандартов компиляции
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
-add_executable(${This}
-  "${CMAKE_SOURCE_DIR}/MainApplication/main.cpp"
-  "${CMAKE_SOURCE_DIR}/Assets/resource/resource.rc"
-)
+# Указываем, где будут создаваться готовые .exe и файлы сборки.
+# Благодаря этому папка bin/ и все скомпилированные файлы появятся внутри build/ в корне
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib)
 
-target_link_libraries(${This} PRIVATE D3D12Engine)
-set_target_properties(${This} PROPERTIES WIN32_EXECUTABLE TRUE)
+# Автоматически копируем ассеты из папки Engine/Assets в выходную бинарную папку build/bin/Assets
+file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/Engine/Assets" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/bin")
 
-target_include_directories(${This} PRIVATE
-  "${CMAKE_SOURCE_DIR}/"
-  "${CMAKE_SOURCE_DIR}/MainApplication/"
-  "${CMAKE_SOURCE_DIR}/D3D12Engine/Include/Graphics"
-  "${CMAKE_SOURCE_DIR}/Assets/resource/*.rc"
-)
-
-add_subdirectory(D3D12Engine)
+# Заходим внутрь папки Engine, где лежит второй CMakeLists.txt
+add_subdirectory(Engine)

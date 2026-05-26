@@ -1,24 +1,70 @@
 #include <d3dcompiler.h>
 #include <DirectXMath.h>
 #include <filesystem>
-#include <exception>
 #include <stdexcept>
 
-#include <Include/Graphics/Core/DirectX12Graphics.hpp>
-#include <Include/Graphics/Core/CommandContext.hpp>
-#include <Include/Graphics/Pipeline/Display.hpp>
-#include <Include/Graphics/Scene/Model.hpp>
-#include <Include/Graphics/Scene/Input.hpp>
+#include <Renderer/D3D12Engine/Backend/DirectX12Graphics/DirectX12Graphics.hpp>
 
 D3D12Engine::DirectX12Graphics::DirectX12Graphics(
-  UINT WindowWidth, UINT WindowHeight, UINT AspectWidth, UINT AspectHeight, std::wstring WindowName
+  UINT WindowWidth, UINT WindowHeight
 ) :
-  InterfaceDirectX12(WindowWidth, WindowHeight, AspectWidth, AspectHeight, WindowName),
   m_viewPort(0.F, 0.F, static_cast<float>(m_WindowWidth), static_cast<float>(m_WindowHeight)),
   m_scissorRect(0, 0, m_WindowWidth, m_WindowHeight)
 {}
 
-D3D12Engine::DirectX12Graphics::~DirectX12Graphics() {}
+D3D12Engine::DirectX12Graphics::~DirectX12Graphics() {
+  OnDestroy();
+}
+
+_Use_decl_annotations_
+void DirectX12Graphics::GetHardwareAdapter(
+  _In_ IDXGIFactory1* pFactory1,
+  _Outptr_opt_result_maybenull_ IDXGIAdapter1** ppAdapter1,
+  bool requestHighPerfomanceAdapter
+) {
+  *ppAdapter1 = nullptr;
+
+  Microsoft::WRL::ComPtr<IDXGIAdapter1> Adapter1;
+  Microsoft::WRL::ComPtr<IDXGIFactory6> Factory6;
+
+  if (SUCCEEDED(pFactory1->QueryInterface(IID_PPV_ARGS(&Factory6)))) {
+    const auto GpuPreference = requestHighPerfomanceAdpter ? DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE : DXGI_GPU_PREFERENCE_UNSPECIFIED;
+    
+    for (UINT AdapterIndex = 0;
+      SUCCEEDED(Factory6->EnumAdapterByGpuPreference(AdapterIndex, GpuPreference, IID_PPV_ARGS(&Adapter1)));
+      AdapterIndex += 1)
+    {
+      DXGI_ADAPTER_DESC1 AdapterDescriptor;
+      Adapter1->GetDesc1(&AdapterDescriptor);
+
+      if (AdapterDescriptor.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) {
+        continue;
+      }
+      if (SUCCEEDED(D3D12CreateDevice(Adapter1.Get(), D3D_FEATURE_LEVEL_11_0, _uuidof(ID3D12Device), nullptr))) {
+        *ppAdapter1 = Adapter1.Detach();
+        return;
+      }
+    }
+  }
+
+  for (
+    UINT AdapterIndex = 0;
+    SUCCEEDED(pFactory1->EnumAdapters1(AdapterIndex, &Adapter1));
+    AdapterIndex += 1
+  ) {
+    DXGI_ADAPTER_DESC1 AdapterDescriptor;
+    Adapter1->GetDesc1(&AdapterDescriptor);
+
+    if (AdapterDescriptor.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) {
+      continue;
+    }
+
+    if (SUCCEEDED(D3D12CreateDevice(Adapter1.Get(), D3D_FEATURE_LEVEL_11_0, _uuidof(ID3D12Device), nullptr))) {
+      *ppAdapter1 = Adapter1.Detach();
+      return;
+    }
+  }
+}
 
 void D3D12Engine::DirectX12Graphics::OnInitialize() {
   LoadPipeline();
@@ -45,7 +91,7 @@ void D3D12Engine::DirectX12Graphics::OnInitialize() {
 
   // ↓ Initializing Camera ↓
   m_Camera = std::make_unique<Camera>();
-  m_Camera->SetPosition(0.0F, 0.0F, -5.0F);
+  m_Camera->SetPosition(0.0F, 15.0F, -25.0F);
   // ↑ Initializing Camera ↑
 
   LoadAssets();
@@ -156,7 +202,7 @@ void D3D12Engine::DirectX12Graphics::OnUpdate() {
 
   // ↓ Rotation ↓
   static float angle = 0.0f;
-  angle += 0.00f; // ← Set up rotation speed
+  angle += 0.05f; // ← Set up rotation speed
   
   m_Camera->UpdateMatrixView();
 
@@ -302,7 +348,7 @@ void D3D12Engine::DirectX12Graphics::LoadAssets() {
   m_cmdContext->Reset();
     // ↓ Initializing & Downloading Models ↓
     m_Model = std::make_unique<Model>();
-    m_Model->LoadObj("Assets\\Model.obj", m_device.Get(), *m_cmdContext);
+    m_Model->LoadObj("Assets\\MshkFrede.obj", m_device.Get(), *m_cmdContext);
 
     m_FloorModel = std::make_unique<Model>();
     m_FloorModel->LoadObj("Assets\\Plane.obj", m_device.Get(), *m_cmdContext);
