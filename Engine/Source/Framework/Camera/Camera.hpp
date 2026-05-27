@@ -20,7 +20,7 @@ class Camera {
   // ↑ Setters ↑
   
   // ↓ Input processing ↓
-  void InputProcessing(float Delta);
+  void InputProcessing(const float MovementSpeed, const float mouseSensivity);
   // ↑ Input processing ↑
 
   // ↓ Getters ↓

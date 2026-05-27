@@ -64,19 +64,21 @@ void D3D12Engine::DirectX12Graphics::GetHardwareAdapter(
 }
 
 void D3D12Engine::DirectX12Graphics::OnInitialize() {
+  // ↓ Loading Pipeline ↓
   LoadPipeline();
+  // ↑ Loading Pipeline ↑
   
   // ↓ Initializing CommandQueue ↓
   m_cmdQueue = std::make_unique<CommandQueue>(
     m_device.Get(), D3D12_COMMAND_LIST_TYPE_DIRECT
   );
-  // ↓ Initializing CommandQueue ↓
+  // ↑ Initializing CommandQueue ↑
 
   // ↓ Initializing CommandContext ↓
   m_cmdContext = std::make_unique<CommandContext>(
     m_device.Get(), D3D12_COMMAND_LIST_TYPE_DIRECT
   );
-  // ↓ Initializing CommandContext ↓
+  // ↑ Initializing CommandContext ↑
 
   // ↓ Initializing SwapCahin ↓
   m_display = std::make_unique<SwapChain>();
@@ -96,7 +98,9 @@ void D3D12Engine::DirectX12Graphics::OnInitialize() {
   m_Camera->GetTransform().SetPosition(0.0F, 15.0F, -25.0F);
   // ↑ Initializing Camera ↑
 
+  // ↓ Loading Assets ↓
   LoadAssets();
+  // ↑ Loading Assets ↑
 }
 
 void D3D12Engine::DirectX12Graphics::OnRender() {
@@ -131,11 +135,8 @@ void D3D12Engine::DirectX12Graphics::OnRender() {
 
   m_cmdContext->SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
   
-  m_cmdContext->GetCommandList()->SetGraphicsRoot32BitConstants(0, 16, &m_DisplacementMatrix, 0);
-  m_Model->Draw(*m_cmdContext);
-  
-  m_cmdContext->GetCommandList()->SetGraphicsRoot32BitConstants(0, 16, &m_FloorMatrix, 0);
-  m_FloorModel->Draw(*m_cmdContext);
+  m_GameObjects["MshkFrede"]->Draw(*m_cmdContext);
+  m_GameObjects["Plane"]->Draw(*m_cmdContext);
 
   // ↓ Barrier ↓
   m_cmdContext->TransitionResource(m_display->GetCurrentBackBufferIndex(), D3D12_RESOURCE_STATE_PRESENT);
@@ -184,21 +185,20 @@ void D3D12Engine::DirectX12Graphics::OnResize(UINT WindowWidth, UINT WindowHeigh
 }
 
 void D3D12Engine::DirectX12Graphics::OnUpdate() {
-  const float Delta = 0.05F;
-  m_Camera->InputProcessing(Delta);
+  // ↓ Camera Movement ↓
+  const float MovementSpeed = 0.25F, MouseSensivity = 0.05F;
+  m_Camera->InputProcessing(MovementSpeed, MouseSensivity);
 
   DirectX::XMMATRIX view = m_Camera->GetTransform().GetMatrixView();
   DirectX::XMMATRIX projection = m_Camera->GetMatrixProjection();
+  // ↑ Camera Movement ↑
   
   // ↓ Rotation ↓
   static float angle = 0.0f;
   angle += 0.00f; // ← Set up rotation speed
   
-  DirectX::XMMATRIX model = DirectX::XMMatrixRotationY(angle);
-  m_DisplacementMatrix = DirectX::XMMatrixTranspose(model * view * projection);
-  
-  DirectX::XMMATRIX floor = DirectX::XMMatrixTranslation(0.0f, -1.0f, 0.0f);
-  m_FloorMatrix = DirectX::XMMatrixTranspose(floor * view * projection);
+  m_GameObjects["MshkFrede"]->UpdateModelMatrix(view, projection);
+  m_GameObjects["Plane"]->UpdateModelMatrix(view, projection);
   // ↑ Rotation ↑
 }
 
@@ -207,8 +207,9 @@ void D3D12Engine::DirectX12Graphics::OnDestroy() {
     m_cmdQueue->Flush();
   }
 
-  m_Model.reset();
-  m_FloorModel.reset();
+  m_GameObjects["MshkFrede"].reset();
+  m_GameObjects["Plane"].reset();
+  
   m_Camera.reset();
   m_display.reset();
   m_cmdContext.reset();
@@ -332,11 +333,13 @@ void D3D12Engine::DirectX12Graphics::LoadAssets() {
 
   m_cmdContext->Reset();
     // ↓ Initializing & Downloading Models ↓
-    m_Model = std::make_unique<Model>();
-    m_Model->LoadObj("Engine/Assets/Models/MshkFrede.obj", m_device.Get(), *m_cmdContext);
+    m_GameObjects["MshkFrede"] = std::make_unique<GameObject>("MshkFrede", "Engine/Assets/Models/MshkFrede.obj");
+    m_GameObjects["MshkFrede"]->Initialize(m_device.Get(), *m_cmdContext);
+    m_GameObjects["MshkFrede"]->GetTransform().SetPosition(0.0F, 0.0F, 0.0F);
 
-    m_FloorModel = std::make_unique<Model>();
-    m_FloorModel->LoadObj("Engine/Assets/Models/Plane.obj", m_device.Get(), *m_cmdContext);
+    m_GameObjects["Plane"] = std::make_unique<GameObject>("Plane", "Engine/Assets/Models/Plane.obj");
+    m_GameObjects["Plane"]->Initialize(m_device.Get(), *m_cmdContext);
+    m_GameObjects["Plane"]->GetTransform().SetPosition(0.0F, 0.0F, 0.0F);
     // ↑ Initializing & Downloading Models ↑
   m_cmdContext->Close();
 

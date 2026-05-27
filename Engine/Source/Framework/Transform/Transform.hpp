@@ -28,6 +28,7 @@ class Transform {
 
   // ↓ Getters ↓
   XMMATRIX GetMatrixView();
+  XMMATRIX GetMatrixModel();
   
   XMFLOAT3 GetPosition() const {
     return m_Position;

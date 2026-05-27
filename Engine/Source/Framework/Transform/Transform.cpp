@@ -127,3 +127,19 @@ XMMATRIX Transform::GetMatrixView() {
 
   return view;
 }
+
+XMMATRIX Transform::GetMatrixModel() {
+  DirectX::XMMATRIX Model;
+
+  Model.r[0] = DirectX::XMLoadFloat3(&m_Right);
+  Model.r[1] = DirectX::XMLoadFloat3(&m_Up);
+  Model.r[2] = DirectX::XMLoadFloat3(&m_Look);
+  Model.r[3] = DirectX::XMLoadFloat3(&m_Position);
+
+  Model.r[0] = DirectX::XMVectorSetW(Model.r[0], 0.0F);
+  Model.r[1] = DirectX::XMVectorSetW(Model.r[1], 0.0F);
+  Model.r[2] = DirectX::XMVectorSetW(Model.r[2], 0.0F);
+  Model.r[3] = DirectX::XMVectorSetW(Model.r[3], 1.0F);
+
+  return Model;
+}

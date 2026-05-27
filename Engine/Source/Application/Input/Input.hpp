@@ -2,7 +2,6 @@
 #include <windows.h>
 #include <DirectXMath.h>
 
-
 class Input {
  public:
   Input() = delete;

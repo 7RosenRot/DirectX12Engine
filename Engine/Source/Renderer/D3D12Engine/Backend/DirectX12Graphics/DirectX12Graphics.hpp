@@ -4,11 +4,13 @@
 #include <DirectXMath.h>
 #include <memory>
 #include <string>
+#include <unordered_map>
 
 // DirectX include path
 #include <Renderer/D3D12Engine/Backend/RHI/Libraries/d3dx12.h>
 
 #include <Framework/Camera/Camera.hpp>
+#include <Framework/GameObject/GameObject.hpp>
 
 #include <Renderer/IRenderer/IRenderer.hpp>
 
@@ -59,13 +61,9 @@ namespace D3D12Engine {
       CD3DX12_RECT m_scissorRect{};
     // ↑ Pipeline modules ↑
 
-    // ↓ Model ↓
-      std::unique_ptr<Model> m_Model;
-      std::unique_ptr<Model> m_FloorModel;
-
-      DirectX::XMMATRIX m_DisplacementMatrix;
-      DirectX::XMMATRIX m_FloorMatrix;
-    // ↑ Model ↑
+    // ↓ GameObject ↓
+      std::unordered_map<std::string, std::unique_ptr<GameObject>> m_GameObjects;
+    // ↑ GameObject ↑
 
     // ↓ Camera ↓
       std::unique_ptr<Camera> m_Camera;
