@@ -1,7 +1,7 @@
 #pragma once
 
 #include <d3d12.h>
-#include <Include\Libraries\d3dx12.h>
+#include <Renderer/D3D12Engine/Backend/RHI/Libraries/d3dx12.h>
 #include <wrl/client.h>
 
 namespace D3D12Engine {

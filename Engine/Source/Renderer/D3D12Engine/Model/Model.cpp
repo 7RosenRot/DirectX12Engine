@@ -4,7 +4,7 @@
 #include <iostream>
 #include <map>
 
-#include <include/Graphics/Scene/Model.hpp>
+#include <Renderer/D3D12Engine/Model/Model.hpp>
 
 bool D3D12Engine::Model::LoadObj(const std::string& filepath, ID3D12Device* device, CommandContext& uploadContext) {
   std::ifstream file(filepath);

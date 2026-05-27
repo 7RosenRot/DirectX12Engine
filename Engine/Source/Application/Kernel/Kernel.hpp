@@ -5,35 +5,44 @@
 #include <windows.h>
 
 #include <Application/Window/Window.hpp>
+#include <Application/Input/Input.hpp>
+
 #include <Renderer/IRenderer/IRenderer.hpp>
+#include <Renderer/D3D12Engine/Backend/DirectX12Graphics/DirectX12Graphics.hpp>
 
 class Kernel {
  public:
   Kernel() = default;
   ~Kernel() = default;
 
-  bool InitializeApp(
-    HINSTANCE hInstance, int cmdShow, unsigned int WindowWidth, unsigned int WindowHeight, const std::wstring& WindowName
+  void AppInitialize(
+    HINSTANCE hInstance,
+    int nCmdShow,
+    UINT WindowWidth,
+    UINT WindowHeight,
+    const std::wstring& WindowName
   );
-  void RunApp();
-  void DestroyApp();
+  void AppRun();
+  void AppDestroy();
 
-  unsigned int GetWindowWidth() const { return m_WindowWidth; }
-  unsigned int GetWindowHeight() const { return m_WindowHeight; }
-  const std::wstring& GetWindowName() const { return m_WindowName; }
+  static UINT GetWindowWidth()  { return m_WindowWidth; }
+  static UINT GetWindowHeight() { return m_WindowHeight; }
+  static const wchar_t* GetWindowName() { return m_WindowName.c_str(); }
 
-  float GetAspectRatio() const { return static_cast<float>(m_WindowWidth) / static_cast<float>(m_WindowHeight); }
+  float GetAspectRatio() const {
+    return static_cast<float>(m_WindowWidth) / static_cast<float>(m_WindowHeight); 
+  }
   
   static IRenderer* GetRendererInstance() { return m_pRendererInstance; }
  private:
-  std::unique_ptr<Window> m_Window;
-  std::unique_ptr<IRenderer> m_Renderer;
+  std::unique_ptr<Window> m_pWindow;
+  std::unique_ptr<IRenderer> m_pRenderer;
 
-  unsigned int m_WindowWidth;
-  unsigned int m_WindowHeight;
-  std::wstring m_WindowName;
+  static inline UINT m_WindowWidth = 0;
+  static inline UINT m_WindowHeight = 0;
+  static inline std::wstring m_WindowName = L"";
 
   bool m_AppRunning = false;
 
   static inline IRenderer* m_pRendererInstance = nullptr;
-}
+};

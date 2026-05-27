@@ -1,14 +1,14 @@
 #pragma once
 
 #include <d3d12.h>
-#include <Include\Libraries\d3dx12.h>
+#include <Renderer/D3D12Engine/Backend/RHI\Libraries\d3dx12.h>
 #include <wrl/client.h>
 #include <vector>
 
-#include <Include/Graphics/Resources/GpuBuffer.hpp>
-#include <Include/Graphics/Resources/GpuResource.hpp>
-#include <Include/Graphics/Resources/BackBuffer.hpp>
-#include <Include/Graphics/Resources/DepthBuffer.hpp>
+#include <Renderer/D3D12Engine/Backend/RHI/Resources/GpuBuffer/GpuBuffer.hpp>
+#include <Renderer/D3D12Engine/Backend/RHI/Resources/GpuResource/GpuResource.hpp>
+#include <Renderer/D3D12Engine/Backend/RHI/Resources/BackBuffer/BackBuffer.hpp>
+#include <Renderer/D3D12Engine/Backend/RHI/Resources/DepthBuffer/DepthBuffer.hpp>
 
 namespace D3D12Engine {
   class CommandContext {

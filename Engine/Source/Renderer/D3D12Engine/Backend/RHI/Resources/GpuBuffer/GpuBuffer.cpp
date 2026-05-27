@@ -1,7 +1,7 @@
 #include <exception>
 #include <stdexcept>
 
-#include <include/Graphics/Resources/GpuBuffer.hpp>
+#include <Renderer/D3D12Engine/Backend/RHI/Resources/GpuBuffer/GpuBuffer.hpp>
 
 void D3D12Engine::GpuBuffer::Create(ID3D12Device* pDevice, const std::wstring& name,
   UINT sizeInBytes, const void* initialData) {

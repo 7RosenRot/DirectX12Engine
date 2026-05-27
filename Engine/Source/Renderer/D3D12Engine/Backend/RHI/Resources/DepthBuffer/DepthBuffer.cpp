@@ -1,6 +1,6 @@
 #include <stdexcept>
 
-#include <Include/Graphics/Resources/DepthBuffer.hpp>
+#include <Renderer/D3D12Engine/Backend/RHI/Resources/DepthBuffer/DepthBuffer.hpp>
 
 void D3D12Engine::DepthBuffer::Create(ID3D12Device* device, const std::wstring& name, UINT width, UINT height, DXGI_FORMAT format) {
   m_Format = format;

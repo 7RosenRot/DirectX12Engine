@@ -3,24 +3,24 @@
 #include <dxgi1_6.h>
 #include <wrl/client.h>
 
-#include <Include/Graphics/Core/GraphicsCore.hpp>
-#include <Include/Graphics/Resources/BackBuffer.hpp>
-#include <Include/Graphics/Resources/DepthBuffer.hpp>
+#include <Renderer/D3D12Engine/Backend/RHI/Core/GraphicsCore/GraphicsCore.hpp>
+#include <Renderer/D3D12Engine/Backend/RHI/Resources/BackBuffer/BackBuffer.hpp>
+#include <Renderer/D3D12Engine/Backend/RHI/Resources/DepthBuffer/DepthBuffer.hpp>
 
 namespace D3D12Engine {
-  class Display {
+  class SwapChain {
    public:
-    Display() = default;
-    ~Display() = default;
+    SwapChain() = default;
+    ~SwapChain() = default;
 
-    // ↓ SwapChain (Display) interaction ↓
+    // ↓ SwapChain (SwapChain) interaction ↓
     void Initialize(ID3D12Device* pDevice, IDXGIFactory4* pFactory, ID3D12CommandQueue* pCmdQueue,
       HWND hwnd, UINT WindowWidth, UINT WindowHeight);
 
     void Present();
     
     void Resize(ID3D12Device* pDevice, DepthBuffer& pDepthBuffer, UINT WindowWidth, UINT WindowHeight);
-    // ↑ SwapChain (Display) interaction ↑
+    // ↑ SwapChain (SwapChain) interaction ↑
 
     // ↓ Getters ↓
     UINT GetCurrentFrameIndex() const {

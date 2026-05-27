@@ -1,7 +1,7 @@
-#include <Include/Graphics/Pipeline/Display.hpp>
-#include <Include/Graphics/Resources/DepthBuffer.hpp>
+#include <Renderer/D3D12Engine/Backend/RHI/Pipeline/SwapChain/SwapChain.hpp>
+#include <Renderer/D3D12Engine/Backend/RHI/Resources/DepthBuffer/DepthBuffer.hpp>
 
-void D3D12Engine::Display::Initialize(ID3D12Device* pDevice, IDXGIFactory4* pFactory, ID3D12CommandQueue* pCmdQueue,
+void D3D12Engine::SwapChain::Initialize(ID3D12Device* pDevice, IDXGIFactory4* pFactory, ID3D12CommandQueue* pCmdQueue,
   HWND hwnd, UINT WindowWidth, UINT WindowHeight)
 {
   DXGI_SWAP_CHAIN_DESC1 swapChainDescriptor{};
@@ -53,13 +53,13 @@ void D3D12Engine::Display::Initialize(ID3D12Device* pDevice, IDXGIFactory4* pFac
   }
 }
 
-void D3D12Engine::Display::Present() {
+void D3D12Engine::SwapChain::Present() {
   m_swapChain->Present(1, 0);
   
   m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 }
 
-void D3D12Engine::Display::Resize(ID3D12Device* pDevice, DepthBuffer& pDepthBuffer, UINT WindowWidth, UINT WindowHeight) {
+void D3D12Engine::SwapChain::Resize(ID3D12Device* pDevice, DepthBuffer& pDepthBuffer, UINT WindowWidth, UINT WindowHeight) {
   for (UINT frame = 0 ; frame < GraphicsCore::m_frameCount; frame += 1) {
     m_renderTargetsResources[frame].Destroy();
   }

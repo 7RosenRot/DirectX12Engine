@@ -1,27 +1,27 @@
-#include <Include/Graphics/Scene/Input.hpp>
+#include <Application/Input/Input.hpp>
 
 // ↓ Initializing ↓
-HWND D3D12Engine::Input::m_Hwnd = nullptr;
-bool D3D12Engine::Input::m_Keys[256] = {false};
+HWND Input::m_Hwnd = nullptr;
+bool Input::m_Keys[256] = {false};
 
-bool  D3D12Engine::Input::m_MouseLocker = false;
-float D3D12Engine::Input::m_MouseDeltaX = 0.0F;
-float D3D12Engine::Input::m_MouseDeltaY = 0.0F;
+bool  Input::m_MouseLocker = false;
+float Input::m_MouseDeltaX = 0.0F;
+float Input::m_MouseDeltaY = 0.0F;
 // ↑ Initializing ↑
 
-void D3D12Engine::Input::Initialize(HWND hwnd) {
+void Input::Initialize(HWND hwnd) {
   m_Hwnd = hwnd;
 }
 
-void D3D12Engine::Input::SetStatusKey(UINT8 key, bool isDown) {
+void Input::SetStatusKey(UINT8 key, bool isDown) {
   m_Keys[key] = isDown;
 }
 
-bool D3D12Engine::Input::IsKeyDown(UINT8 key) {
+bool Input::IsKeyDown(UINT8 key) {
   return m_Keys[key];
 }
 
-void D3D12Engine::Input::SetMouseLock(bool lock) {
+void Input::SetMouseLock(bool lock) {
   if (m_MouseLocker == lock) {
     return;
   }
@@ -40,7 +40,7 @@ void D3D12Engine::Input::SetMouseLock(bool lock) {
   }
 }
 
-void D3D12Engine::Input::OnMouseMove(int x, int y) {
+void Input::OnMouseMove(int x, int y) {
   if (!m_MouseLocker) {
     return;
   }
@@ -66,7 +66,7 @@ void D3D12Engine::Input::OnMouseMove(int x, int y) {
   SetCursorPos(centerPoint.x, centerPoint.y);
 }
 
-void D3D12Engine::Input::GetMouseDelta(float& dx, float& dy) {
+void Input::GetMouseDelta(float& dx, float& dy) {
   dx = m_MouseDeltaX;
   dy = m_MouseDeltaY;
 

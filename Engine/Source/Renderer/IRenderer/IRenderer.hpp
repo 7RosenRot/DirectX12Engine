@@ -7,7 +7,7 @@ class IRenderer {
   IRenderer() = default;
   virtual ~IRenderer() = default;
   
-  virtual void OnInitialize(HWND hwnd, UINT WindowWidth, UINT WindowHeight) = 0;
+  virtual void OnInitialize() = 0;
   virtual void OnRender() = 0;
   virtual void OnResize(UINT WindowWidth, UINT WindowHeight) = 0;
   virtual void OnUpdate() = 0;

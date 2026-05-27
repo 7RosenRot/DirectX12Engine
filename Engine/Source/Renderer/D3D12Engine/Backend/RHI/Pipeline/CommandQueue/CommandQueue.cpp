@@ -1,7 +1,7 @@
 #include <exception>
 #include <stdexcept>
 
-#include <Include/Graphics/Pipeline/CommandQueue.hpp>
+#include <Renderer/D3D12Engine/Backend/RHI/Pipeline/CommandQueue/CommandQueue.hpp>
 
 D3D12Engine::CommandQueue::CommandQueue(
   ID3D12Device* pDevice, D3D12_COMMAND_LIST_TYPE cmdListType) : m_fenceValue(1) 

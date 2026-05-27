@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Include/Graphics/Resources/GpuResource.hpp>
+#include <Renderer/D3D12Engine/Backend/RHI/Resources/GpuResource/GpuResource.hpp>
 
 namespace D3D12Engine {    
   class GpuBuffer : public GpuResource {

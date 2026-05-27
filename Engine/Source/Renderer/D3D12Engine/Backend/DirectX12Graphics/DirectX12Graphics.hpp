@@ -24,20 +24,23 @@
 namespace D3D12Engine {
   class DirectX12Graphics : public IRenderer {
    public:
-    DirectX12Graphics();
+    DirectX12Graphics(HWND hwnd, UINT WindowWidth, UINT WindowHeight);
     ~DirectX12Graphics() override;
 
-    void OnInitialize(HWND hwnd, unsigned int WindowWidth, unsigned int WindowHeight) override;
+    void OnInitialize() override;
     void OnRender() override;
-    void OnResize(unsigned int WindowWidth, unsigned int WindowHeight) override;
+    void OnResize(UINT WindowWidth, UINT WindowHeight) override;
     void OnUpdate() override;
     void OnDestroy() override;
   
    private:
-    // ↓ Window properties ↓ 
+    // ↓ Window properties ↓
+      HWND m_hwnd;
       unsigned int m_WindowWidth;
       unsigned int m_WindowHeight;
     // ↑ Window properties ↑
+
+    bool m_useWarpAdapter = false;
 
     // ↓ Pipeline modules ↓ 
       Microsoft::WRL::ComPtr<ID3D12Device> m_device;
@@ -68,7 +71,11 @@ namespace D3D12Engine {
       std::unique_ptr<Camera> m_Camera;
     // ↑ Camera ↑
 
-    void GetHardwareAdapter(_In_ IDXGIFactory1* pFactory1, _Outptr_opt_result_maybenull_ IDXGIAdapter1** ppAdapter1, bool requestHighPerfomanceAdapter);
+    void GetHardwareAdapter(
+      _In_ IDXGIFactory1* pFactory1,
+      _Outptr_opt_result_maybenull_ IDXGIAdapter1** ppAdapter1,
+      bool requestHighPerformanceAdapter
+    );
     
     void LoadPipeline();
     void LoadAssets();

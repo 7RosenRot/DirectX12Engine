@@ -5,8 +5,8 @@
 #include <string>
 #include <vector>
 
-#include <include/Graphics/Resources/GpuBuffer.hpp>
-#include <include/Graphics/Core/CommandContext.hpp>
+#include <Renderer/D3D12Engine/Backend/RHI/Resources/GpuBuffer/GpuBuffer.hpp>
+#include <Renderer/D3D12Engine/Backend/RHI/Core/CommandContext/CommandContext.hpp>
 
 namespace D3D12Engine {
   class Model {

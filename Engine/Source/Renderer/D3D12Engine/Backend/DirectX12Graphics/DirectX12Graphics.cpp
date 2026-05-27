@@ -5,7 +5,9 @@
 
 #include <Renderer/D3D12Engine/Backend/DirectX12Graphics/DirectX12Graphics.hpp>
 
-D3D12Engine::DirectX12Graphics::DirectX12Graphics() {}
+D3D12Engine::DirectX12Graphics::DirectX12Graphics(HWND hwnd, UINT WindowWidth, UINT WindowHeight) :
+  m_WindowWidth(WindowWidth), m_WindowHeight(WindowHeight), m_hwnd(hwnd)
+{}
 
 D3D12Engine::DirectX12Graphics::~DirectX12Graphics() {
   OnDestroy();
@@ -15,7 +17,7 @@ _Use_decl_annotations_
 void D3D12Engine::DirectX12Graphics::GetHardwareAdapter(
   _In_ IDXGIFactory1* pFactory1,
   _Outptr_opt_result_maybenull_ IDXGIAdapter1** ppAdapter1,
-  bool requestHighPerfomanceAdapter
+  bool requestHighPerformanceAdapter
 ) {
   *ppAdapter1 = nullptr;
 
@@ -23,7 +25,7 @@ void D3D12Engine::DirectX12Graphics::GetHardwareAdapter(
   Microsoft::WRL::ComPtr<IDXGIFactory6> Factory6;
 
   if (SUCCEEDED(pFactory1->QueryInterface(IID_PPV_ARGS(&Factory6)))) {
-    const auto GpuPreference = requestHighPerfomanceAdpter ? DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE : DXGI_GPU_PREFERENCE_UNSPECIFIED;
+    const auto GpuPreference = requestHighPerformanceAdapter ? DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE : DXGI_GPU_PREFERENCE_UNSPECIFIED;
     
     for (UINT AdapterIndex = 0;
       SUCCEEDED(Factory6->EnumAdapterByGpuPreference(AdapterIndex, GpuPreference, IID_PPV_ARGS(&Adapter1)));
@@ -61,69 +63,37 @@ void D3D12Engine::DirectX12Graphics::GetHardwareAdapter(
   }
 }
 
-void D3D12Engine::DirectX12Graphics::OnInitialize(HWND hwnd, unsigned int WindowWidth, unsigned int WindowHeight) {
-  m_WindowWidth = WindowWidth;
-  m_WindowHeight = WindowHeight;
-
-  m_viewPort = CD3DX12_VIEWPORT(0.0f, 0.0f, static_cast<float>(WindowWidth), static_cast<float>(WindowHeight));
-  m_scissorRect = CD3DX12_RECT(0, 0, static_cast<long>(WindowWidth), static_cast<long>(WindowHeight));
-
-  UINT DXGIFactoryFlags{0};
-#if defined(_DEBUG)
-  {
-    Microsoft::WRL::ComPtr<ID3D12Debug> debugController;
-    if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController)))) {
-      debugController->EnableDebugLayer();
-      DXGIFactoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
-    }
-  }
-#endif
-
-  CreateDXGIFactory2(DXGIFactoryFlags, IID_PPV_ARGS(&factory4));
-
-  if (m_useWarpAdapter) {
-    Microsoft::WRL::ComPtr<IDXGIAdapter> warpAdapter;
-    
-    factory4->EnumWarpAdapter(IID_PPV_ARGS(&warpAdapter));
-    D3D12CreateDevice(warpAdapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_device));
-  }
-  else {
-    Microsoft::WRL::ComPtr<IDXGIAdapter1> hardwareAdapter;
-    
-    GetHardwareAdapter(factory4.Get(), &hardwareAdapter, true);
-    D3D12CreateDevice(hardwareAdapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_device));
-  }
-
-  m_depthBuffer.Create(
-    m_device.Get(),
-    L"MainDepthBuffer",
-    m_WindowWidth, m_WindowHeight,
-    DXGI_FORMAT_D32_FLOAT
-  );
-
+void D3D12Engine::DirectX12Graphics::OnInitialize() {
+  LoadPipeline();
+  
   // ↓ Initializing CommandQueue ↓
-  m_cmdQueue = std::make_unique<CommandQueue>(m_device.Get(), D3D12_COMMAND_LIST_TYPE_DIRECT);
+  m_cmdQueue = std::make_unique<CommandQueue>(
+    m_device.Get(), D3D12_COMMAND_LIST_TYPE_DIRECT
+  );
   // ↓ Initializing CommandQueue ↓
 
   // ↓ Initializing CommandContext ↓
-  m_cmdContext = std::make_unique<CommandContext>(m_device.Get(), D3D12_COMMAND_LIST_TYPE_DIRECT);
+  m_cmdContext = std::make_unique<CommandContext>(
+    m_device.Get(), D3D12_COMMAND_LIST_TYPE_DIRECT
+  );
   // ↓ Initializing CommandContext ↓
 
   // ↓ Initializing SwapCahin ↓
-  m_display = std::make_unique<Display>();
+  m_display = std::make_unique<SwapChain>();
 
   m_display->Initialize(
     m_device.Get(),
     factory4.Get(),
     m_cmdQueue->GetResource(),
-    D3D12Engine::Window::GetHwnd(),
+    m_hwnd,
     m_WindowWidth, m_WindowHeight
   );
   // ↑ Initializing SwapCahin ↑
 
   // ↓ Initializing Camera ↓
   m_Camera = std::make_unique<Camera>();
-  m_Camera->SetPosition(0.0F, 15.0F, -25.0F);
+  
+  m_Camera->GetTransform().SetPosition(0.0F, 15.0F, -25.0F);
   // ↑ Initializing Camera ↑
 
   LoadAssets();
@@ -188,7 +158,7 @@ void D3D12Engine::DirectX12Graphics::OnResize(UINT WindowWidth, UINT WindowHeigh
 
   m_display->Resize(m_device.Get(), m_depthBuffer, WindowWidth, WindowHeight);
 
-  const float AspectRatio = GetAspectRatio();
+  const float AspectRatio = static_cast<float>(WindowWidth) / static_cast<float>(WindowHeight);
 
   float viewportWidth = static_cast<float>(WindowWidth);
   float viewportHeight = viewportWidth / AspectRatio;
@@ -210,37 +180,20 @@ void D3D12Engine::DirectX12Graphics::OnResize(UINT WindowWidth, UINT WindowHeigh
     static_cast<long>(offsetX + viewportWidth), static_cast<long>(offsetY + viewportHeight)
   );
 
-  m_Camera->SetLensProperties(DirectX::XMConvertToRadians(45.0f), AspectRatio, 0.1f, 100.0f);
+  m_Camera->SetLensProperties(DirectX::XMConvertToRadians(45.0f), AspectRatio, 0.1f, 20000.0f);
 }
 
 void D3D12Engine::DirectX12Graphics::OnUpdate() {
-  const float dt = 0.01f;
-  const float speed = 5.0f * dt;
+  const float Delta = 0.05F;
+  m_Camera->InputProcessing(Delta);
 
-  if (Input::IsKeyDown('W')) { m_Camera->Forward( speed ); }
-  if (Input::IsKeyDown('S')) { m_Camera->Forward(-speed ); }
-  if (Input::IsKeyDown('A')) { m_Camera->Sideway(-speed ); }
-  if (Input::IsKeyDown('D')) { m_Camera->Sideway( speed ); }
-
-  float mouseDx = 0.0f, mouseDy = 0.0f;
-  Input::GetMouseDelta(mouseDx, mouseDy);
-
-  if (mouseDx != 0.0f || mouseDy != 0.0f) {
-    float mouseSensivity = 0.1F;
-    
-    m_Camera->RotateX(DirectX::XMConvertToRadians(mouseDy * mouseSensivity));
-    m_Camera->RotateY(DirectX::XMConvertToRadians(mouseDx * mouseSensivity));
-  }
-
+  DirectX::XMMATRIX view = m_Camera->GetTransform().GetMatrixView();
+  DirectX::XMMATRIX projection = m_Camera->GetMatrixProjection();
+  
   // ↓ Rotation ↓
   static float angle = 0.0f;
-  angle += 0.05f; // ← Set up rotation speed
+  angle += 0.00f; // ← Set up rotation speed
   
-  m_Camera->UpdateMatrixView();
-
-  DirectX::XMMATRIX view = m_Camera->GetMatrixView();
-  DirectX::XMMATRIX projection = m_Camera->GetMatrixProjection();
-
   DirectX::XMMATRIX model = DirectX::XMMatrixRotationY(angle);
   m_DisplacementMatrix = DirectX::XMMatrixTranspose(model * view * projection);
   
@@ -267,6 +220,41 @@ void D3D12Engine::DirectX12Graphics::OnDestroy() {
   }
 }
 
+void D3D12Engine::DirectX12Graphics::LoadPipeline() {
+  UINT DXGIFactoryFlags{0};
+#if defined(_DEBUG)
+  {
+    Microsoft::WRL::ComPtr<ID3D12Debug> debugController;
+    if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController)))) {
+      debugController->EnableDebugLayer();
+      DXGIFactoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
+    }
+  }
+#endif
+
+  CreateDXGIFactory2(DXGIFactoryFlags, IID_PPV_ARGS(&factory4));
+
+  if (m_useWarpAdapter) {
+    Microsoft::WRL::ComPtr<IDXGIAdapter> warpAdapter;
+    
+    factory4->EnumWarpAdapter(IID_PPV_ARGS(&warpAdapter));
+    D3D12CreateDevice(warpAdapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_device));
+  }
+  else {
+    Microsoft::WRL::ComPtr<IDXGIAdapter1> hardwareAdapter;
+    
+    GetHardwareAdapter(factory4.Get(), &hardwareAdapter, true);
+    D3D12CreateDevice(hardwareAdapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_device));
+  }
+
+  m_depthBuffer.Create(
+    m_device.Get(),
+    L"MainDepthBuffer",
+    m_WindowWidth, m_WindowHeight,
+    DXGI_FORMAT_D32_FLOAT
+  );
+}
+
 void D3D12Engine::DirectX12Graphics::LoadAssets() {
   m_rootSignature.Reset(1);
   m_rootSignature[0].InitAsConstants(0, 16, D3D12_SHADER_VISIBILITY_VERTEX);
@@ -281,7 +269,7 @@ void D3D12Engine::DirectX12Graphics::LoadAssets() {
   // ↓ Shader Compilation ↓
   HRESULT hResult{0};
 
-  std::wstring vtxShaderPath = L"Assets/Shaders/D3D12/VertexShader.hlsl";
+  std::wstring vtxShaderPath = L"Engine/Assets/Shaders/D3D12/VertexShader.hlsl";
   if (!std::filesystem::exists(vtxShaderPath)) { OutputDebugStringW((L"ERROR: File not found - " + vtxShaderPath + L'\n').c_str()); }
   
   Microsoft::WRL::ComPtr<ID3DBlob> vertexShader;
@@ -303,7 +291,7 @@ void D3D12Engine::DirectX12Graphics::LoadAssets() {
     throw std::runtime_error("Vertex Shader compilation has failed!");
   }
 
-  std::wstring pxlShaderPath = L"Assets/Shaders/D3D12/PixelShader.hlsl";
+  std::wstring pxlShaderPath = L"Engine/Assets/Shaders/D3D12/PixelShader.hlsl";
   if (!std::filesystem::exists(pxlShaderPath)) { OutputDebugStringW((L"ERROR: File not found - " + pxlShaderPath + L'\n').c_str()); }
 
   Microsoft::WRL::ComPtr<ID3DBlob> pixelShader;
@@ -345,10 +333,10 @@ void D3D12Engine::DirectX12Graphics::LoadAssets() {
   m_cmdContext->Reset();
     // ↓ Initializing & Downloading Models ↓
     m_Model = std::make_unique<Model>();
-    m_Model->LoadObj("Assets\\MshkFrede.obj", m_device.Get(), *m_cmdContext);
+    m_Model->LoadObj("Engine/Assets/Models/MshkFrede.obj", m_device.Get(), *m_cmdContext);
 
     m_FloorModel = std::make_unique<Model>();
-    m_FloorModel->LoadObj("Assets\\Plane.obj", m_device.Get(), *m_cmdContext);
+    m_FloorModel->LoadObj("Engine/Assets/Models/Plane.obj", m_device.Get(), *m_cmdContext);
     // ↑ Initializing & Downloading Models ↑
   m_cmdContext->Close();
 
