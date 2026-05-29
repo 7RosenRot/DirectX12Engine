@@ -5,6 +5,8 @@
 #include <string>
 #include <vector>
 
+#include <Renderer/D3D12Engine/Texture/Texture.hpp>
+
 #include <Renderer/D3D12Engine/Backend/RHI/Resources/GpuBuffer/GpuBuffer.hpp>
 #include <Renderer/D3D12Engine/Backend/RHI/Core/CommandContext/CommandContext.hpp>
 
@@ -13,7 +15,7 @@ namespace D3D12Engine {
    public:
     struct Vertex {
       DirectX::XMFLOAT3 Position;
-      DirectX::XMFLOAT2 TexCoord;
+      DirectX::XMFLOAT2 Texture;
       DirectX::XMFLOAT3 Normal;
     };
 

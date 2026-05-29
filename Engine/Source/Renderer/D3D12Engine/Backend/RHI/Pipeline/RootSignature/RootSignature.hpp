@@ -12,6 +12,12 @@ namespace D3D12Engine {
     RootParameter() = default;
     ~RootParameter() = default;
     
+    void InitAsDescriptorTable(
+      UINT numDescriptorRange,
+      const D3D12_DESCRIPTOR_RANGE* pDescriptorRanges,
+      D3D12_SHADER_VISIBILITY Visibility = D3D12_SHADER_VISIBILITY_ALL
+    );
+    
     void InitAsConstantBuffer(
       UINT numRegister, D3D12_SHADER_VISIBILITY visibility = D3D12_SHADER_VISIBILITY_ALL
     );  
@@ -32,6 +38,8 @@ namespace D3D12Engine {
     void Reset(UINT numParams, UINT numSamplers = 0);
     void Finalize(ID3D12Device* pDevice, D3D12_ROOT_SIGNATURE_FLAGS flags);
 
+    void InitStaticSampler(UINT index, const CD3DX12_STATIC_SAMPLER_DESC& samplerDesc);
+    
     ID3D12RootSignature* Get() const { return m_RootSignature.Get(); }
 
     RootParameter& operator[](size_t index) { return m_RootParams.get()[index]; }

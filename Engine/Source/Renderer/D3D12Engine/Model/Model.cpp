@@ -6,89 +6,115 @@
 
 #include <Renderer/D3D12Engine/Model/Model.hpp>
 
-bool D3D12Engine::Model::LoadObj(const std::string& filepath, ID3D12Device* device, CommandContext& uploadContext) {
-  std::ifstream file(filepath);
+bool D3D12Engine::Model::LoadObj(
+  const std::string& FilePath,
+  ID3D12Device* pDevice,
+  CommandContext& rCommandContext
+) {
+  std::ifstream ObjFile(FilePath);
   
-  if (!file.is_open()) {
-    std::cerr << "Failed to open OBJ file: " << filepath << std::endl;
+  if (!ObjFile.is_open()) {
+    OutputDebugStringA(("File not found: " + FilePath + "\n").c_str());
+    
     return false;
   }
   
-  std::vector<DirectX::XMFLOAT3> temp_positions;
-  std::vector<DirectX::XMFLOAT2> temp_texcoords;
-  std::vector<DirectX::XMFLOAT3> temp_normals;
+  std::vector<DirectX::XMFLOAT3> tmpPositionBuffer;
+  std::vector<DirectX::XMFLOAT2> tmpTextureBuffer;
+  std::vector<DirectX::XMFLOAT3> tmpNarmalBuffer;
   
-  std::vector<Vertex> vertices;
-  std::vector<UINT> indices;
+  std::vector<Vertex> Vertices;
+  std::vector<UINT> Indices;
   
-  std::string line;
-  UINT currentIndex = 0;
+  std::string crtReadingLine;
+  UINT crtIndex = 0;
   
-  while (std::getline(file, line)) {
-    std::istringstream iss(line);
-    std::string type;
+  while (std::getline(ObjFile, crtReadingLine)) {
+    std::istringstream Stream(crtReadingLine);
+    std::string lineType;
     
-    iss >> type;
-    if (type == "v") {
-      DirectX::XMFLOAT3 pos;
-      iss >> pos.x >> pos.y >> pos.z;
-      pos.z *= -1.0f; 
-      temp_positions.push_back(pos);
+    Stream >> lineType;
+    if (lineType == "v") {
+      DirectX::XMFLOAT3 Position;
+      Stream >> Position.x >> Position.y >> Position.z;
+      Position.z *= -1.0f; 
+      
+      tmpPositionBuffer.push_back(Position);
     }
     
-    else if (type == "vt") {
-      DirectX::XMFLOAT2 uv;
-      iss >> uv.x >> uv.y;
-      uv.y = 1.0f - uv.y;
-      temp_texcoords.push_back(uv);
+    else if (lineType == "vt") {
+      DirectX::XMFLOAT2 Texture;
+      Stream >> Texture.x >> Texture.y;
+      Texture.y = 1.0f - Texture.y;
+
+      tmpTextureBuffer.push_back(Texture);
     }
     
-    else if (type == "vn") {
-      DirectX::XMFLOAT3 normal;
-      iss >> normal.x >> normal.y >> normal.z;
-      normal.z *= -1.0f;
-      temp_normals.push_back(normal);
+    else if (lineType == "vn") {
+      DirectX::XMFLOAT3 Normal;
+      Stream >> Normal.x >> Normal.y >> Normal.z;
+      Normal.z *= -1.0f;
+      
+      tmpNarmalBuffer.push_back(Normal);
     }
     
-    else if (type == "f") {
+    else if (lineType == "f") {
       for (int i = 0; i < 3; ++i) {
-        std::string vertexData;
-        iss >> vertexData;
+        std::string VertexData;
+        Stream >> VertexData;
         
-        std::replace(vertexData.begin(), vertexData.end(), '/', ' ');
-        std::istringstream viss(vertexData);
+        std::replace(VertexData.begin(), VertexData.end(), '/', ' ');
+        std::istringstream VertexStream(VertexData);
         
-        int vIdx = 0, vtIdx = 0, vnIdx = 0;
-        viss >> vIdx >> vtIdx >> vnIdx;
-        Vertex vertex{};
-        // Индексы в OBJ начинаются с 1
-        if (vIdx > 0) vertex.Position = temp_positions[vIdx - 1];
-        if (vtIdx > 0) vertex.TexCoord = temp_texcoords[vtIdx - 1];
-        if (vnIdx > 0) vertex.Normal = temp_normals[vnIdx - 1];
-        vertices.push_back(vertex);
-        indices.push_back(currentIndex++);
+        int VertexPositionIdx = 0, VertexTextureIdx = 0, VertexNormalIdx = 0;
+        VertexStream >> VertexPositionIdx >> VertexTextureIdx >> VertexNormalIdx;
+        
+        Vertex VertexStruct{};
+        
+        if (VertexPositionIdx > 0) {
+          VertexStruct.Position = tmpPositionBuffer[VertexPositionIdx - 1];
+        }
+        
+        if (VertexTextureIdx > 0) {
+          VertexStruct.Texture = tmpTextureBuffer[VertexTextureIdx - 1];
+        }
+        
+        if (VertexNormalIdx > 0) {
+          VertexStruct.Normal = tmpNarmalBuffer[VertexNormalIdx - 1];
+        }
+        
+        Vertices.push_back(VertexStruct);
+        Indices.push_back(crtIndex++);
       }
     }
   }
-  m_IndexCount = static_cast<UINT>(indices.size());
   
-  const UINT vbByteSize = static_cast<UINT>(vertices.size() * sizeof(Vertex));
-  const UINT ibByteSize = static_cast<UINT>(indices.size() * sizeof(UINT));
+  m_IndexCount = static_cast<UINT>(Indices.size());
   
-  std::wstring wName(filepath.begin(), filepath.end());
+  const UINT VertexBufferByteSize = static_cast<UINT>(Vertices.size() * sizeof(Vertex));
+  const UINT IndexBufferByteSize = static_cast<UINT>(Indices.size() * sizeof(UINT));
   
-  m_VertexBuffer.Create(device, wName + L"_VB", vbByteSize);
-  m_IndexBuffer.Create(device, wName + L"_IB", ibByteSize);
+  std::wstring ObjDebugName(FilePath.begin(), FilePath.end());
+
+  // ↓ Vertex Buffer - Create, Initialize, Fill Structure ↓
+  m_VertexBuffer.Create(pDevice, ObjDebugName + L"_VB", VertexBufferByteSize);
   
-  uploadContext.InitializeBuffer(m_VertexBuffer, vertices.data(), vbByteSize);
-  uploadContext.InitializeBuffer(m_IndexBuffer, indices.data(), ibByteSize);
+  rCommandContext.InitializeBuffer(m_VertexBuffer, Vertices.data(), VertexBufferByteSize);
   
   m_VertexBufferView.BufferLocation = m_VertexBuffer.GetResource()->GetGPUVirtualAddress();
   m_VertexBufferView.StrideInBytes = sizeof(Vertex);
-  m_VertexBufferView.SizeInBytes = vbByteSize;
+  m_VertexBufferView.SizeInBytes = VertexBufferByteSize;
+  // ↑ Vertex Buffer - Create, Initialize, Fill Structure ↑
+
+  // ↓ Index Buffer - Create, Initialize, Fill Structure ↓
+  m_IndexBuffer.Create(pDevice, ObjDebugName + L"_IB", IndexBufferByteSize);
+
+  rCommandContext.InitializeBuffer(m_IndexBuffer, Indices.data(), IndexBufferByteSize);
+  
   m_IndexBufferView.BufferLocation = m_IndexBuffer.GetResource()->GetGPUVirtualAddress();
   m_IndexBufferView.Format = DXGI_FORMAT_R32_UINT;
-  m_IndexBufferView.SizeInBytes = ibByteSize;
+  m_IndexBufferView.SizeInBytes = IndexBufferByteSize;
+  // ↑ Index Buffer - Create, Initialize, Fill Structure ↑
   
   return true;
 }

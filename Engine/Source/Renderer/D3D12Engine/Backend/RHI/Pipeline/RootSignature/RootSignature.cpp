@@ -1,11 +1,7 @@
 #include <Renderer/D3D12Engine/Backend/RHI/Pipeline/RootSignature/RootSignature.hpp>
 
-void D3D12Engine::RootSignature::Reset(UINT numRootParams, UINT numSamplers) {
-  m_RootParams = std::make_unique<RootParameter[]>(numRootParams);
-  m_numRootParams = numRootParams;
-
-  m_SamplerDesc = std::make_unique<CD3DX12_STATIC_SAMPLER_DESC[]>(numSamplers);
-  m_numSamplers = numSamplers;
+void D3D12Engine::RootParameter::InitAsDescriptorTable(UINT numDescriptorRanges, const D3D12_DESCRIPTOR_RANGE* pDescriptorRanges, D3D12_SHADER_VISIBILITY visibility) {
+  m_RootParam.InitAsDescriptorTable(numDescriptorRanges, pDescriptorRanges, visibility);
 }
 
 void D3D12Engine::RootParameter::InitAsConstantBuffer(UINT numRegister, D3D12_SHADER_VISIBILITY visibility) {
@@ -14,6 +10,20 @@ void D3D12Engine::RootParameter::InitAsConstantBuffer(UINT numRegister, D3D12_SH
 
 void D3D12Engine::RootParameter::InitAsConstants(UINT shaderRegister, UINT num32BitValues, D3D12_SHADER_VISIBILITY visibility) {
   m_RootParam.InitAsConstants(num32BitValues, shaderRegister, 0, visibility);
+}
+
+void D3D12Engine::RootSignature::InitStaticSampler(UINT index, const CD3DX12_STATIC_SAMPLER_DESC& samplerDesc) {
+  if (index < m_numSamplers) {
+    m_SamplerDesc[index] = samplerDesc;
+  }
+}
+
+void D3D12Engine::RootSignature::Reset(UINT numRootParams, UINT numSamplers) {
+  m_RootParams = std::make_unique<RootParameter[]>(numRootParams);
+  m_numRootParams = numRootParams;
+
+  m_SamplerDesc = std::make_unique<CD3DX12_STATIC_SAMPLER_DESC[]>(numSamplers);
+  m_numSamplers = numSamplers;
 }
 
 void D3D12Engine::RootSignature::Finalize(ID3D12Device* pDevice, D3D12_ROOT_SIGNATURE_FLAGS flags) {

@@ -1,3 +1,9 @@
+// Принимаем текстуру из нашей Descriptor Table (t0)
+Texture2D t_BaseColor : register(t0);
+
+// Принимаем правила наложения (Static Sampler) (s0)
+SamplerState s_Sampler : register(s0);
+
 struct PS_INPUT {
     float4 Position : SV_POSITION;
     float2 UV       : TEXCOORD;
@@ -5,22 +11,22 @@ struct PS_INPUT {
 };
 
 float4 PSMain(PS_INPUT input) : SV_TARGET {
-    // 1. Нормализуем входящую нормаль (после интерполяции она может "уплыть")
+    // 1. Нормализуем входящую нормаль
     float3 N = normalize(input.Normal);
     
-    // 2. Задаем направление света (пусть светит чуть сверху и спереди)
+    // 2. Направление света
     float3 L = normalize(float3(0.5f, 0.5f, -1.0f));
     
-    // 3. Считаем коэффициент освещенности (скалярное произведение)
-    // saturate обрезает значения меньше 0
+    // 3. Диффузное освещение
     float diff = saturate(dot(N, L));
     
-    // 4. Добавляем немного фонового света (Ambient), чтобы тени не были абсолютно черными
+    // 4. Фоновое освещение (Ambient)
     float ambient = 0.2f;
     float lightIntensity = diff + ambient;
     
-    // 5. Итоговый цвет (серый металлик для Сюзанны)
-    float3 baseColor = float3(0.7f, 0.7f, 0.8f); 
+    // 5. Читаем цвет из текстуры по переданным UV координатам
+    float4 texColor = t_BaseColor.Sample(s_Sampler, input.UV);
     
-    return float4(baseColor * lightIntensity, 1.0f);
+    // 6. Умножаем цвет текстуры на свет (альфа-канал оставляем как есть)
+    return float4(texColor.rgb * lightIntensity, texColor.a);
 }

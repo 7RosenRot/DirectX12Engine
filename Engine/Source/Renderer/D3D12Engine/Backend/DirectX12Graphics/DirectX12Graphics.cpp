@@ -95,7 +95,7 @@ void D3D12Engine::DirectX12Graphics::OnInitialize() {
   // ↓ Initializing Camera ↓
   m_Camera = std::make_unique<Camera>();
   
-  m_Camera->GetTransform().SetPosition(0.0F, 15.0F, -25.0F);
+  m_Camera->GetTransform().SetPosition(0.0F, 3.5F, -10.0F);
   // ↑ Initializing Camera ↑
 
   // ↓ Loading Assets ↓
@@ -135,8 +135,8 @@ void D3D12Engine::DirectX12Graphics::OnRender() {
 
   m_cmdContext->SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
   
-  m_GameObjects["MshkFrede"]->Draw(*m_cmdContext);
-  m_GameObjects["Plane"]->Draw(*m_cmdContext);
+  m_GameObjects["bastard_gun_corpus"]->Draw(*m_cmdContext);
+  m_GameObjects["bastard_gun_magazin_corob"]->Draw(*m_cmdContext);
 
   // ↓ Barrier ↓
   m_cmdContext->TransitionResource(m_display->GetCurrentBackBufferIndex(), D3D12_RESOURCE_STATE_PRESENT);
@@ -186,7 +186,7 @@ void D3D12Engine::DirectX12Graphics::OnResize(UINT WindowWidth, UINT WindowHeigh
 
 void D3D12Engine::DirectX12Graphics::OnUpdate() {
   // ↓ Camera Movement ↓
-  const float MovementSpeed = 0.25F, MouseSensivity = 0.05F;
+  const float MovementSpeed = 0.10F, MouseSensivity = 0.05F;
   m_Camera->InputProcessing(MovementSpeed, MouseSensivity);
 
   DirectX::XMMATRIX view = m_Camera->GetTransform().GetMatrixView();
@@ -197,8 +197,8 @@ void D3D12Engine::DirectX12Graphics::OnUpdate() {
   static float angle = 0.0f;
   angle += 0.00f; // ← Set up rotation speed
   
-  m_GameObjects["MshkFrede"]->UpdateModelMatrix(view, projection);
-  m_GameObjects["Plane"]->UpdateModelMatrix(view, projection);
+  m_GameObjects["bastard_gun_corpus"]->UpdateModelMatrix(view, projection);
+  m_GameObjects["bastard_gun_magazin_corob"]->UpdateModelMatrix(view, projection);
   // ↑ Rotation ↑
 }
 
@@ -207,8 +207,8 @@ void D3D12Engine::DirectX12Graphics::OnDestroy() {
     m_cmdQueue->Flush();
   }
 
-  m_GameObjects["MshkFrede"].reset();
-  m_GameObjects["Plane"].reset();
+  m_GameObjects["bastard_gun_corpus"].reset();
+  m_GameObjects["bastard_gun_magazin_corob"].reset();
   
   m_Camera.reset();
   m_display.reset();
@@ -257,8 +257,23 @@ void D3D12Engine::DirectX12Graphics::LoadPipeline() {
 }
 
 void D3D12Engine::DirectX12Graphics::LoadAssets() {
-  m_rootSignature.Reset(1);
+  m_rootSignature.Reset(2, 1);
   m_rootSignature[0].InitAsConstants(0, 16, D3D12_SHADER_VISIBILITY_VERTEX);
+  
+  CD3DX12_DESCRIPTOR_RANGE srvRange;
+  srvRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0); // 1 дескриптор в регистре t0
+  m_rootSignature[1].InitAsDescriptorTable(1, &srvRange, D3D12_SHADER_VISIBILITY_PIXEL);
+
+  CD3DX12_STATIC_SAMPLER_DESC sampler(
+    0,
+    D3D12_FILTER_MIN_MAG_MIP_LINEAR,
+    D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+    D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+    D3D12_TEXTURE_ADDRESS_MODE_WRAP
+  );
+  sampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+  m_rootSignature.InitStaticSampler(0, sampler);
+  
   m_rootSignature.Finalize(m_device.Get(), D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
 #if defined(_DEBUG)
@@ -333,13 +348,25 @@ void D3D12Engine::DirectX12Graphics::LoadAssets() {
 
   m_cmdContext->Reset();
     // ↓ Initializing & Downloading Models ↓
-    m_GameObjects["MshkFrede"] = std::make_unique<GameObject>("MshkFrede", "Engine/Assets/Models/MshkFrede.obj");
-    m_GameObjects["MshkFrede"]->Initialize(m_device.Get(), *m_cmdContext);
-    m_GameObjects["MshkFrede"]->GetTransform().SetPosition(0.0F, 0.0F, 0.0F);
+    {
+      // ↓ Corpus ↓
+      m_GameObjects["bastard_gun_corpus"] = std::make_unique<GameObject>(
+        "Engine/Assets/Models/bastard_gun/bastard_gun_corpus.obj",
+        "Engine/Assets/Models/bastard_gun/bastard_gun_corpus.png"
+      );
+      m_GameObjects["bastard_gun_corpus"]->Initialize(m_device.Get(), *m_cmdContext);
+      m_GameObjects["bastard_gun_corpus"]->GetTransform().SetPosition(0.0F, 0.0F, 0.0F);
+      // ↑ Corpus ↑
 
-    m_GameObjects["Plane"] = std::make_unique<GameObject>("Plane", "Engine/Assets/Models/Plane.obj");
-    m_GameObjects["Plane"]->Initialize(m_device.Get(), *m_cmdContext);
-    m_GameObjects["Plane"]->GetTransform().SetPosition(0.0F, 0.0F, 0.0F);
+      // ↓ Post Box ↓
+      m_GameObjects["bastard_gun_magazin_corob"] = std::make_unique<GameObject>(
+        "Engine/Assets/Models/bastard_gun/bastard_gun_magazin_corob.obj",
+        "Engine/Assets/Models/bastard_gun/bastard_gun_magazin_corob.png"
+      );
+      m_GameObjects["bastard_gun_magazin_corob"]->Initialize(m_device.Get(), *m_cmdContext);
+      m_GameObjects["bastard_gun_magazin_corob"]->GetTransform().SetPosition(0.0F, 0.0F, 0.0F);
+      // ↑ Post Box ↑
+    }
     // ↑ Initializing & Downloading Models ↑
   m_cmdContext->Close();
 

@@ -1,7 +1,10 @@
 #include <Framework/GameObject/GameObject.hpp>
 
-GameObject::GameObject(const std::string& ObjName, const std::string& ObjPath) : 
-  m_ObjName(ObjName), m_ObjPath(ObjPath)
+GameObject::GameObject(
+  const std::string& ModelPath,
+  const std::string& TexturePath
+) : 
+  m_ModelPath(ModelPath), m_TexturePath(TexturePath)
 {}
 
 void GameObject::Initialize(
@@ -9,7 +12,8 @@ void GameObject::Initialize(
 ) {
   m_Model = std::make_unique<D3D12Engine::Model>();
 
-  m_Model->LoadObj(m_ObjPath, pDevice, rCommandContext);
+  m_Model->LoadObj(m_ModelPath, pDevice, rCommandContext);
+  m_Texture.LoadTexture(m_TexturePath, pDevice, rCommandContext);
 }
 
 void GameObject::UpdateModelMatrix(DirectX::FXMMATRIX ModelView, DirectX::FXMMATRIX ModelProjection) {
@@ -22,6 +26,8 @@ void GameObject::Draw(D3D12Engine::CommandContext& rCommandContext) {
   if (m_Model == nullptr) {
     return;
   }
+
+  m_Texture.Bind(rCommandContext, 1);
 
   rCommandContext.GetCommandList()->SetGraphicsRoot32BitConstants(0, 16, &m_ModelMatrix, 0);
   m_Model->Draw(rCommandContext);
