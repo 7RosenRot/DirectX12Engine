@@ -1,7 +1,5 @@
 # D3D12Engine - 3D is available now. For more detailes touch and clone [*develop*](https://github.com/7RosenRot/DirectX12Engine/tree/develop) branch 
 
-Coming soon...
-
 <p align="center">
   <img src="github/demo.gif" alt="Preview" width="600">
 </p>
