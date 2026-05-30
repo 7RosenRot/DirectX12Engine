@@ -1,31 +1,12 @@
-# -- general properties -- #
 cmake_minimum_required(VERSION 3.20)
-project(DirectX12Engine LANGUAGES CXX)
+project(GameEngineWorkspace LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
-# -- set paths -- #
-set(ENGINE_ROOT "${CMAKE_SOURCE_DIR}/DX3D12Engine")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib)
 
-file(GLOB_RECURSE ENGINE_SOURCE "${ENGINE_ROOT}/Source/*.cpp")
-
-set(MAIN_APP "${CMAKE_SOURCE_DIR}/Main Application/main.cpp")
-
-# -- source files -- #
-add_executable(DirectX12Engine
-    ${MAIN_APP}
-    ${ENGINE_SOURCE}
-)
-
-# -- include files -- #
-target_include_directories(DirectX12Engine
-PRIVATE
-    ${ENGINE_ROOT}
-)
-
-# -- link libaries -- #
-target_link_libraries(DirectX12Engine
-PRIVATE
-    d3d12 dxgi dxguid d3dcompiler
-)
+add_subdirectory(Engine)
