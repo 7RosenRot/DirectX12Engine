@@ -35,45 +35,45 @@ cmake --build build --parallel --config=Release
 
 Engine/
 - Assets/           ← Assets
-- - Models/
-- - Resource/
-- - Shaders/
+  - Models/
+  - Resource/
+  - Shaders/
 
 - Source/           ← Source Code
-- - Application/            ← Layer 4
-- - - Window/
-- - - Input/
-- - - Kernel/
+  - Application/            ← Layer 4
+    - Window/
+    - Input/
+    - Kernel/
 
-- - Framework/              ← Layer 3
-- - - Camera/
-- - - Transform/
-- - - GameObject/
+ - Framework/              ← Layer 3
+   - Camera/
+   - Transform/
+   - GameObject/
 
-- - Renderer/               ← Layer 2
-- - - IRenderer/
-- - - D3D12Engine/
-- - - - Model/
-- - - - Texture/
-- - - - Backend/
-- - - - - DirectX12Graphics/
-- - - - - RHI/              ← Layer 1
-- - - - - - Core/
-- - - - - - - CommandContext/
-- - - - - - - GraphicsCore/
-- - - - - - Pipeline/
-- - - - - - - CommandQueue/
-- - - - - - - SwapChain/
-- - - - - - - PipelineState/
-- - - - - - - RootSignature/
-- - - - - - Resources/
-- - - - - - - BackBuffer/
-- - - - - - - DepthBuffer/
-- - - - - - - GpuBuffer/
-- - - - - - - GpuResource/
-- - - - - - Libraries/
+  - Renderer/               ← Layer 2
+    - IRenderer/
+    - D3D12Engine/
+      - Model/
+      - Texture/
+      - Backend/
+        - DirectX12Graphics/
+        - RHI/              ← Layer 1
+          - Core/
+            - CommandContext/
+            - GraphicsCore/
+          - Pipeline/
+            - CommandQueue/
+            - SwapChain/
+            - PipelineState/
+            - RootSignature/
+          - Resources/
+            - BackBuffer/
+            - DepthBuffer/
+            - GpuBuffer/
+            - GpuResource/
+          - Libraries/
 
-- - main.cpp
+  - main.cpp
 
 - CMakeLists.txt
 
