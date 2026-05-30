@@ -6,15 +6,15 @@
 
 #include <Renderer/D3D12Engine/Model/Model.hpp>
 
-bool D3D12Engine::Model::LoadObj(
-  const std::string& FilePath,
-  ID3D12Device* pDevice,
-  CommandContext& rCommandContext
+bool D3D12Engine::Model::LoadModel(
+  const std::string& rFilePath,
+  ID3D12Device*      pDevice,
+  CommandContext&    rCommandContext
 ) {
-  std::ifstream ObjFile(FilePath);
+  std::ifstream ObjFile(rFilePath);
   
   if (!ObjFile.is_open()) {
-    OutputDebugStringA(("File not found: " + FilePath + "\n").c_str());
+    OutputDebugStringA(("File not found: " + rFilePath + "\n").c_str());
     
     return false;
   }
@@ -24,7 +24,7 @@ bool D3D12Engine::Model::LoadObj(
   std::vector<DirectX::XMFLOAT3> tmpNarmalBuffer;
   
   std::vector<Vertex> Vertices;
-  std::vector<UINT> Indices;
+  std::vector<UINT>   Indices;
   
   std::string crtReadingLine;
   UINT crtIndex = 0;
@@ -34,6 +34,7 @@ bool D3D12Engine::Model::LoadObj(
     std::string lineType;
     
     Stream >> lineType;
+    // ↓ If line is Vertex type ↓
     if (lineType == "v") {
       DirectX::XMFLOAT3 Position;
       Stream >> Position.x >> Position.y >> Position.z;
@@ -41,7 +42,9 @@ bool D3D12Engine::Model::LoadObj(
       
       tmpPositionBuffer.push_back(Position);
     }
+    // ↑ If line is Vertex type ↑
     
+    // ↓ If line is Texture type ↓
     else if (lineType == "vt") {
       DirectX::XMFLOAT2 Texture;
       Stream >> Texture.x >> Texture.y;
@@ -49,7 +52,9 @@ bool D3D12Engine::Model::LoadObj(
 
       tmpTextureBuffer.push_back(Texture);
     }
+    // ↑ If line is Texture type ↑
     
+    // ↓ If line is Normal type ↓
     else if (lineType == "vn") {
       DirectX::XMFLOAT3 Normal;
       Stream >> Normal.x >> Normal.y >> Normal.z;
@@ -57,7 +62,9 @@ bool D3D12Engine::Model::LoadObj(
       
       tmpNarmalBuffer.push_back(Normal);
     }
+    // ↑ If line is Normal type ↑
     
+    // ↓ If line is Face type ↓
     else if (lineType == "f") {
       for (int i = 0; i < 3; ++i) {
         std::string VertexData;
@@ -87,14 +94,17 @@ bool D3D12Engine::Model::LoadObj(
         Indices.push_back(crtIndex++);
       }
     }
+    // ↑ If line is Face type ↑
   }
   
+  // ↓ Set Up Enviromment ↓
   m_IndexCount = static_cast<UINT>(Indices.size());
   
   const UINT VertexBufferByteSize = static_cast<UINT>(Vertices.size() * sizeof(Vertex));
   const UINT IndexBufferByteSize = static_cast<UINT>(Indices.size() * sizeof(UINT));
   
-  std::wstring ObjDebugName(FilePath.begin(), FilePath.end());
+  std::wstring ObjDebugName(rFilePath.begin(), rFilePath.end());
+  // ↑ Set Up Enviromment ↑
 
   // ↓ Vertex Buffer - Create, Initialize, Fill Structure ↓
   m_VertexBuffer.Create(pDevice, ObjDebugName + L"_VB", VertexBufferByteSize);
@@ -119,12 +129,17 @@ bool D3D12Engine::Model::LoadObj(
   return true;
 }
 
-void D3D12Engine::Model::Draw(CommandContext& context) {
-  context.TransitionResource(m_VertexBuffer, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
-  context.TransitionResource(m_IndexBuffer, D3D12_RESOURCE_STATE_INDEX_BUFFER);
-  context.FlushResourceBarriers();
+void D3D12Engine::Model::DrawModel(CommandContext& rCommandContext) {
+  rCommandContext.TransitionResource(
+    m_VertexBuffer, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER
+  );
+  rCommandContext.TransitionResource(
+    m_IndexBuffer, D3D12_RESOURCE_STATE_INDEX_BUFFER
+  );
   
-  context.SetVertexBuffer(0, m_VertexBufferView);
-  context.SetIndexBuffer(m_IndexBufferView);
-  context.DrawIndexedInstanced(m_IndexCount, 1, 0, 0, 0);
+  rCommandContext.FlushResourceBarriers();
+  
+  rCommandContext.SetVertexBuffer(0, m_VertexBufferView);
+  rCommandContext.SetIndexBuffer(m_IndexBufferView);
+  rCommandContext.DrawIndexedInstanced(m_IndexCount, 1, 0, 0, 0);
 }

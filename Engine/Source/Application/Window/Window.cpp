@@ -1,8 +1,6 @@
 #define UNICODE
 #define _UNICODE
 
-#include <../Assets/Resource/resource.h>
-
 #include <Application/Window/Window.hpp>
 #include <Application/Kernel/Kernel.hpp>
 #include <Application/Input/Input.hpp>
@@ -88,8 +86,8 @@ bool Window::SetWindow(HINSTANCE hInstance, int nCmdShow) {
   wndClass.style = CS_HREDRAW | CS_VREDRAW;
   wndClass.hbrBackground = (HBRUSH)COLOR_WINDOW;
   wndClass.hCursor = LoadCursor(NULL, IDC_ARROW);
-  wndClass.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_APP_ICON));
-  wndClass.hIconSm = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_APP_ICON));
+  wndClass.hIcon = LoadIcon(NULL, IDC_ICON);
+  wndClass.hIconSm = LoadIcon(NULL, IDC_ICON);
   wndClass.hInstance = hInstance;
 
   wndClass.lpfnWndProc = &WndProc;

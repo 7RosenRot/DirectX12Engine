@@ -134,9 +134,10 @@ void D3D12Engine::DirectX12Graphics::OnRender() {
   // ↑ Barrier ↑
 
   m_cmdContext->SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-  
-  m_GameObjects["bastard_gun_corpus"]->Draw(*m_cmdContext);
-  m_GameObjects["bastard_gun_magazin_corob"]->Draw(*m_cmdContext);
+
+  for (auto& [ObjectName, ObjectPtr] : m_GameObjects) {
+    ObjectPtr->Draw(*m_cmdContext);
+  }
 
   // ↓ Barrier ↓
   m_cmdContext->TransitionResource(m_display->GetCurrentBackBufferIndex(), D3D12_RESOURCE_STATE_PRESENT);
@@ -196,9 +197,10 @@ void D3D12Engine::DirectX12Graphics::OnUpdate() {
   // ↓ Rotation ↓
   static float angle = 0.0f;
   angle += 0.00f; // ← Set up rotation speed
-  
-  m_GameObjects["bastard_gun_corpus"]->UpdateModelMatrix(view, projection);
-  m_GameObjects["bastard_gun_magazin_corob"]->UpdateModelMatrix(view, projection);
+
+  for (auto& [ObjectName, ObjectPtr] : m_GameObjects) {
+    ObjectPtr->UpdateModelMatrix(view, projection);
+  }
   // ↑ Rotation ↑
 }
 
@@ -207,8 +209,9 @@ void D3D12Engine::DirectX12Graphics::OnDestroy() {
     m_cmdQueue->Flush();
   }
 
-  m_GameObjects["bastard_gun_corpus"].reset();
-  m_GameObjects["bastard_gun_magazin_corob"].reset();
+  for (auto& [ObjectName, ObjectPtr] : m_GameObjects) {
+    ObjectPtr.reset();
+  }
   
   m_Camera.reset();
   m_display.reset();
@@ -352,18 +355,20 @@ void D3D12Engine::DirectX12Graphics::LoadAssets() {
       // ↓ Corpus ↓
       m_GameObjects["bastard_gun_corpus"] = std::make_unique<GameObject>(
         "Engine/Assets/Models/bastard_gun/bastard_gun_corpus.obj",
-        "Engine/Assets/Models/bastard_gun/bastard_gun_corpus.png"
+        "Engine/Assets/Models/bastard_gun/bastard_gun_corpus.png",
+        "bastard_gun_corpus"
       );
-      m_GameObjects["bastard_gun_corpus"]->Initialize(m_device.Get(), *m_cmdContext);
+      m_GameObjects["bastard_gun_corpus"]->InitContext(m_device.Get(), *m_cmdContext);
       m_GameObjects["bastard_gun_corpus"]->GetTransform().SetPosition(0.0F, 0.0F, 0.0F);
       // ↑ Corpus ↑
 
       // ↓ Post Box ↓
       m_GameObjects["bastard_gun_magazin_corob"] = std::make_unique<GameObject>(
         "Engine/Assets/Models/bastard_gun/bastard_gun_magazin_corob.obj",
-        "Engine/Assets/Models/bastard_gun/bastard_gun_magazin_corob.png"
+        "Engine/Assets/Models/bastard_gun/bastard_gun_magazin_corob.png",
+        "bastard_gun_magazin_corob"
       );
-      m_GameObjects["bastard_gun_magazin_corob"]->Initialize(m_device.Get(), *m_cmdContext);
+      m_GameObjects["bastard_gun_magazin_corob"]->InitContext(m_device.Get(), *m_cmdContext);
       m_GameObjects["bastard_gun_magazin_corob"]->GetTransform().SetPosition(0.0F, 0.0F, 0.0F);
       // ↑ Post Box ↑
     }

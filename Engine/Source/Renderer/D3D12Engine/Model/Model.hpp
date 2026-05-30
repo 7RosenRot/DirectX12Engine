@@ -13,22 +13,26 @@
 namespace D3D12Engine {
   class Model {
    public:
+    Model() = default;
+    ~Model() = default;
+
+    bool LoadModel(
+      const std::string& rFilePath,
+      ID3D12Device*      pDevice,
+      CommandContext&    rCommandContext
+    );
+    
+    void DrawModel(
+      CommandContext&    rCommandContext
+    );
+
+   private:
     struct Vertex {
       DirectX::XMFLOAT3 Position;
       DirectX::XMFLOAT2 Texture;
       DirectX::XMFLOAT3 Normal;
     };
 
-    Model() = default;
-    ~Model() = default;
-
-    bool LoadObj(
-      const std::string& filepath, ID3D12Device* device, CommandContext& uploadContext
-    );
-    
-    void Draw(CommandContext& context);
-
-   private:
     GpuBuffer m_VertexBuffer;
     GpuBuffer m_IndexBuffer;
     

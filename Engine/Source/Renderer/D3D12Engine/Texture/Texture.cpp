@@ -6,9 +6,11 @@ bool D3D12Engine::Texture::LoadTexture(
   ID3D12Device* pDevice,
   CommandContext& rCommandContext
 ) {
-  int imgWidth, imgHeight, Channels;
+  int imgWidth    = 1;
+  int imgHeight   = 1;
+  int imgChannels = 1;
 
-  UCHAR* imageData = stbi_load(FilePath.c_str(), &imgWidth, &imgHeight, &Channels, 4);
+  UCHAR* imageData = stbi_load(FilePath.c_str(), &imgWidth, &imgHeight, &imgChannels, 4);
 
   if (imageData == nullptr) {
     OutputDebugStringA(("File not found: " + FilePath + "\n").c_str());
@@ -93,8 +95,8 @@ void D3D12Engine::Texture::Bind(
 ) {
   if (m_srvHeap == nullptr) { return; }
   
-  ID3D12DescriptorHeap* heaps[] = { m_srvHeap.Get() };
-  rCommandContext.GetCommandList()->SetDescriptorHeaps(1, heaps);
+  ID3D12DescriptorHeap* DescHeapArray[] = { m_srvHeap.Get() };
+  rCommandContext.GetCommandList()->SetDescriptorHeaps(1, DescHeapArray);
 
   rCommandContext.GetCommandList()->SetGraphicsRootDescriptorTable(
     RootParameters,

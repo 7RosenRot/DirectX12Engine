@@ -12,13 +12,14 @@
 class GameObject {
  public:
   GameObject(
-    const std::string& ModelPath = "",
-    const std::string& TexturePath = ""
+    const std::string& ModelPath   = "default",
+    const std::string& TexturePath = "default",
+    const std::string& ObjectName  = "default"
   );
   ~GameObject() = default;
 
   // ↓ Model Pipeline ↓
-  void Initialize(
+  void InitContext(
     ID3D12Device* pDevice, D3D12Engine::CommandContext& rCommandContext
   );
   
@@ -32,6 +33,10 @@ class GameObject {
   // ↑ Model Pipeline ↑
   
   // ↓ Setters ↓
+  void SetObjectName(const std::string& ObjectName) {
+    m_ObjectName = ObjectName;
+  }
+  
   void SetModelPath(const std::string& ModelPath) {
     m_ModelPath = ModelPath;
   }
@@ -49,11 +54,13 @@ class GameObject {
 
  private:
   Transform m_Transform;
+
+  std::string m_ObjectName;
   
-  std::unique_ptr<D3D12Engine::Model> m_Model;
+  std::shared_ptr<D3D12Engine::Model> m_Model;
   std::string m_ModelPath;
   DirectX::XMMATRIX m_ModelMatrix;
   
-  D3D12Engine::Texture m_Texture;
+  std::shared_ptr<D3D12Engine::Texture> m_Texture;
   std::string m_TexturePath;
 };
