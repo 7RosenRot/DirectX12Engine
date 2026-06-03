@@ -73,7 +73,7 @@ bool D3D12Engine::Texture::LoadTexture(
   D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
   srvHeapDesc.NumDescriptors = 1;
   srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-  srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE; // Обязательно видима для шейдера
+  srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
   pDevice->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_srvHeap));
 
   D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};

@@ -92,128 +92,33 @@ void D3D12Engine::DirectX12Graphics::OnInitialize() {
   );
   // ↑ Initializing SwapCahin ↑
 
-  // ↓ Initializing Camera ↓
-  m_Camera = std::make_unique<Camera>();
-  
-  m_Camera->GetTransform().SetPosition(0.0F, 3.5F, -10.0F);
-  // ↑ Initializing Camera ↑
-
   // ↓ Loading Assets ↓
   LoadAssets();
   // ↑ Loading Assets ↑
 }
 
-void D3D12Engine::DirectX12Graphics::OnRender() {
-  // ↓ Prepare Pipeline ↓
-  m_cmdQueue->Flush();
-  m_cmdContext->Reset();
-  // ↑ Prepare Pipeline ↑
-  
-  // ↓ PipelineState & RootSignature ↓
-  m_cmdContext->SetPipelineState(m_pipelineState.GetPipelineState());
-  m_cmdContext->SetGraphicsRootSignature(m_rootSignature.Get());
-  // ↑ PipelineState & RootSignature ↑
-
-  // ↓ Viewport & ScissorRect ↓
-  m_cmdContext->SetViewports(1, &m_viewPort);
-  m_cmdContext->SetScissorRects(1, &m_scissorRect);
-  // ↑ Viewport & ScissorRect ↑
-
-  // ↓ Clean Up ↓
-  const float ClearColor[] = { 0.1f, 0.1f, 0.1f, 1.0f };
-  auto& currentBackBuffer = m_display->GetCurrentBackBufferIndex();
-
-  m_cmdContext->ClearColor(currentBackBuffer, ClearColor);
-  m_cmdContext->ClearDepth(m_depthBuffer);
-  m_cmdContext->SetRenderTargets(currentBackBuffer, m_depthBuffer);
-  // ↑ Clean Up ↑
-
-  // ↓ Barrier ↓
-  m_cmdContext->TransitionResource(m_display->GetCurrentBackBufferIndex(), D3D12_RESOURCE_STATE_RENDER_TARGET);
-  m_cmdContext->FlushResourceBarriers();
-  // ↑ Barrier ↑
-
-  m_cmdContext->SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-  for (auto& [ObjectName, ObjectPtr] : m_GameObjects) {
-    ObjectPtr->Draw(*m_cmdContext);
-  }
-
-  // ↓ Barrier ↓
-  m_cmdContext->TransitionResource(m_display->GetCurrentBackBufferIndex(), D3D12_RESOURCE_STATE_PRESENT);
-  m_cmdContext->FlushResourceBarriers();
-  // ↑ Barrier ↑
-
-  m_cmdContext->Close();
-
-  // ↓ Draw ↓
-  UINT64 fenceValue = m_cmdQueue->ExecuteCommandList(m_cmdContext->GetCommandList());
-  
-  m_display->Present();
-  // ↑ Draw ↑
-  
-  m_cmdQueue->WaitForPreviousFrame(fenceValue);
-}
-
 void D3D12Engine::DirectX12Graphics::OnResize(UINT WindowWidth, UINT WindowHeight) {
+  if (WindowWidth == 0 || WindowHeight == 0) {
+    return;
+  }
+  
+  m_WindowWidth = WindowWidth;
+  m_WindowHeight = WindowHeight;
+
+  if (m_display == nullptr) {
+    return;
+  }
+  
   m_cmdQueue->Flush();
 
   m_display->Resize(m_device.Get(), m_depthBuffer, WindowWidth, WindowHeight);
-
-  const float AspectRatio = static_cast<float>(WindowWidth) / static_cast<float>(WindowHeight);
-
-  float viewportWidth = static_cast<float>(WindowWidth);
-  float viewportHeight = viewportWidth / AspectRatio;
-  
-  if (viewportHeight > WindowHeight) {
-    viewportHeight = static_cast<float>(WindowHeight);
-    viewportWidth = viewportHeight * AspectRatio;
-  }
-  
-  float offsetX = (WindowWidth - viewportWidth) * 0.5F;
-  float offsetY = (WindowHeight - viewportHeight) * 0.5F;
-  
-  m_viewPort = CD3DX12_VIEWPORT(
-    offsetX, offsetY,
-    viewportWidth, viewportHeight
-  );
-  m_scissorRect = CD3DX12_RECT(
-    static_cast<long>(offsetX), static_cast<long>(offsetY),
-    static_cast<long>(offsetX + viewportWidth), static_cast<long>(offsetY + viewportHeight)
-  );
-
-  m_Camera->SetLensProperties(DirectX::XMConvertToRadians(45.0f), AspectRatio, 0.1f, 20000.0f);
-}
-
-void D3D12Engine::DirectX12Graphics::OnUpdate() {
-  // ↓ Camera Movement ↓
-  const float MovementSpeed = 0.10F, MouseSensivity = 0.05F;
-  m_Camera->InputProcessing(MovementSpeed, MouseSensivity);
-
-  DirectX::XMMATRIX view = m_Camera->GetTransform().GetMatrixView();
-  DirectX::XMMATRIX projection = m_Camera->GetMatrixProjection();
-  // ↑ Camera Movement ↑
-  
-  // ↓ Rotation ↓
-  static float angle = 0.0f;
-  angle += 0.00f; // ← Set up rotation speed
-
-  for (auto& [ObjectName, ObjectPtr] : m_GameObjects) {
-    ObjectPtr->UpdateModelMatrix(view, projection);
-  }
-  // ↑ Rotation ↑
 }
 
 void D3D12Engine::DirectX12Graphics::OnDestroy() {
   if (m_cmdQueue != nullptr) {
     m_cmdQueue->Flush();
   }
-
-  for (auto& [ObjectName, ObjectPtr] : m_GameObjects) {
-    ObjectPtr.reset();
-  }
   
-  m_Camera.reset();
   m_display.reset();
   m_cmdContext.reset();
   
@@ -261,10 +166,10 @@ void D3D12Engine::DirectX12Graphics::LoadPipeline() {
 
 void D3D12Engine::DirectX12Graphics::LoadAssets() {
   m_rootSignature.Reset(2, 1);
-  m_rootSignature[0].InitAsConstants(0, 16, D3D12_SHADER_VISIBILITY_VERTEX);
+  m_rootSignature[0].InitAsConstants(0, 16, D3D12_SHADER_VISIBILITY_ALL);
   
   CD3DX12_DESCRIPTOR_RANGE srvRange;
-  srvRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0); // 1 дескриптор в регистре t0
+  srvRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
   m_rootSignature[1].InitAsDescriptorTable(1, &srvRange, D3D12_SHADER_VISIBILITY_PIXEL);
 
   CD3DX12_STATIC_SAMPLER_DESC sampler(
@@ -349,33 +254,190 @@ void D3D12Engine::DirectX12Graphics::LoadAssets() {
   m_pipelineState.SetRenderTargetFormat(DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_D32_FLOAT);
   m_pipelineState.Finalize(m_device.Get());
 
-  m_cmdContext->Reset();
-    // ↓ Initializing & Downloading Models ↓
-    {
-      // ↓ Corpus ↓
-      m_GameObjects["bastard_gun_corpus"] = std::make_unique<GameObject>(
-        "Engine/Assets/Models/bastard_gun/bastard_gun_corpus.obj",
-        "Engine/Assets/Models/bastard_gun/bastard_gun_corpus.png",
-        "bastard_gun_corpus"
-      );
-      m_GameObjects["bastard_gun_corpus"]->InitContext(m_device.Get(), *m_cmdContext);
-      m_GameObjects["bastard_gun_corpus"]->GetTransform().SetPosition(0.0F, 0.0F, 0.0F);
-      // ↑ Corpus ↑
-
-      // ↓ Post Box ↓
-      m_GameObjects["bastard_gun_magazin_corob"] = std::make_unique<GameObject>(
-        "Engine/Assets/Models/bastard_gun/bastard_gun_magazin_corob.obj",
-        "Engine/Assets/Models/bastard_gun/bastard_gun_magazin_corob.png",
-        "bastard_gun_magazin_corob"
-      );
-      m_GameObjects["bastard_gun_magazin_corob"]->InitContext(m_device.Get(), *m_cmdContext);
-      m_GameObjects["bastard_gun_magazin_corob"]->GetTransform().SetPosition(0.0F, 0.0F, 0.0F);
-      // ↑ Post Box ↑
-    }
-    // ↑ Initializing & Downloading Models ↑
-  m_cmdContext->Close();
-
   UINT64 fenceValue = m_cmdQueue->ExecuteCommandList(m_cmdContext->GetCommandList());
  
   m_cmdQueue->WaitForPreviousFrame(fenceValue);
 }
+
+void D3D12Engine::DirectX12Graphics::InitUI() {
+  D3D12_DESCRIPTOR_HEAP_DESC desc = {};
+  desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+  desc.NumDescriptors = 2;
+  desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+  m_device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_UiSrvHeap));
+
+  ImGui_ImplDX12_InitInfo initInfo = {};
+  initInfo.Device = m_device.Get();
+  initInfo.CommandQueue = m_cmdQueue->GetResource();
+  initInfo.NumFramesInFlight = GraphicsCore::m_frameCount;
+  initInfo.RTVFormat = GraphicsCore::BackBufferFormat;
+  initInfo.SrvDescriptorHeap = m_UiSrvHeap.Get();
+  initInfo.LegacySingleSrvCpuDescriptor = m_UiSrvHeap->GetCPUDescriptorHandleForHeapStart();
+  initInfo.LegacySingleSrvGpuDescriptor = m_UiSrvHeap->GetGPUDescriptorHandleForHeapStart();
+  ImGui_ImplDX12_Init(&initInfo);
+}
+
+void D3D12Engine::DirectX12Graphics::BeginUI() {
+  m_cmdContext->TransitionResource(m_SceneTexture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+
+  auto& currentBackBuffer = m_display->GetCurrentBackBufferIndex();
+  // ↓ Barrier ↓
+  m_cmdContext->TransitionResource(currentBackBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET);
+  m_cmdContext->FlushResourceBarriers();
+  // ↑ Barrier ↑
+  
+  const float ClearColor[] = {0.1F, 0.1F, 0.1F, 1.0F};
+  m_cmdContext->ClearColor(currentBackBuffer, ClearColor);
+  m_cmdContext->SetRenderTargets(currentBackBuffer);
+  
+  UINT handleIncrement = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+  D3D12_CPU_DESCRIPTOR_HANDLE destCpuHandle = m_UiSrvHeap->GetCPUDescriptorHandleForHeapStart();
+  destCpuHandle.ptr += handleIncrement;
+  m_device->CopyDescriptorsSimple(1, destCpuHandle, m_SceneTexture.GetSRV(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+  ID3D12DescriptorHeap* heaps[] = { m_UiSrvHeap.Get() };
+  m_cmdContext->GetCommandList()->SetDescriptorHeaps(1, heaps);
+
+  ImGui_ImplDX12_NewFrame();
+}
+
+void D3D12Engine::DirectX12Graphics::RenderUI() {
+  ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), m_cmdContext->GetCommandList());
+}
+
+void D3D12Engine::DirectX12Graphics::DestroyUI() {
+  ImGui_ImplDX12_Shutdown();
+}
+
+void D3D12Engine::DirectX12Graphics::ResizeViewport(UINT ViewportWidth, UINT ViewportHeight) {
+  if (
+    ViewportWidth == 0 ||
+    ViewportHeight == 0
+  ) { return; }
+
+  m_ViewportWidth = ViewportWidth;
+  m_ViewportHeight = ViewportHeight;
+
+  m_cmdQueue->Flush();
+  
+  m_SceneTexture.CreateScene(
+    m_device.Get(),
+    L"SceneColorBuffer",
+    ViewportWidth,
+    ViewportHeight,
+    DXGI_FORMAT_R8G8B8A8_UNORM
+  );
+  
+  m_viewPort = CD3DX12_VIEWPORT(
+    0.0F, 0.0F,
+    static_cast<float>(ViewportWidth), static_cast<float>(ViewportHeight),
+    0.0F, 1.0F
+  );
+  m_scissorRect = CD3DX12_RECT(
+    0, 0,
+    static_cast<long>(ViewportWidth), static_cast<long>(ViewportHeight)
+  );
+}
+
+D3D12_GPU_DESCRIPTOR_HANDLE D3D12Engine::DirectX12Graphics::GetSceneTextureSRV() {
+  D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle = m_UiSrvHeap->GetGPUDescriptorHandleForHeapStart();
+  gpuHandle.ptr += m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+  return gpuHandle;
+}
+
+void D3D12Engine::DirectX12Graphics::BeginFrame() {
+  // ↓ Prepare Pipeline ↓
+  m_cmdQueue->Flush();
+  m_cmdContext->Reset();
+  // ↑ Prepare Pipeline ↑
+  
+  // ↓ Set up PipelineState & RootSignature ↓
+  m_cmdContext->SetPipelineState(m_pipelineState.GetPipelineState());
+  m_cmdContext->SetGraphicsRootSignature(m_rootSignature.Get());
+  // ↑ Set up PipelineState & RootSignature ↑
+
+  // ↓ Set up Viewport & ScissorRect ↓
+  m_cmdContext->SetViewports(1, &m_viewPort);
+  m_cmdContext->SetScissorRects(1, &m_scissorRect);
+  // ↑ Set up Viewport & ScissorRect ↑
+
+  // ↓ Clean Up ↓
+  const float ClearColor[] = { 0.1f, 0.1f, 0.1f, 1.0f };
+  m_cmdContext->ClearColor(m_SceneTexture, ClearColor);
+  m_cmdContext->ClearDepth(m_depthBuffer);
+
+  m_cmdContext->SetRenderTargets(m_SceneTexture, m_depthBuffer);
+  // ↑ Clean Up ↑
+
+  m_cmdContext->SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+}
+
+void D3D12Engine::DirectX12Graphics::DrawFrame(
+  D3D12Engine::Model& rModel,
+  D3D12Engine::Texture& rTexture,
+  const DirectX::XMMATRIX& rViewProjectionMatrix
+) {
+  rTexture.Bind(*m_cmdContext, 1);
+
+  m_cmdContext->GetCommandList()->SetGraphicsRoot32BitConstants(0, 16, &rViewProjectionMatrix, 0);
+
+  rModel.DrawModel(*m_cmdContext);
+}
+
+void D3D12Engine::DirectX12Graphics::EndFrame() {
+  // ↓ Barrier ↓
+  m_cmdContext->TransitionResource(m_display->GetCurrentBackBufferIndex(), D3D12_RESOURCE_STATE_PRESENT);
+  m_cmdContext->FlushResourceBarriers();
+  // ↑ Barrier ↑
+
+  m_cmdContext->Close();
+
+  // ↓ Draw ↓
+  UINT64 fenceValue = m_cmdQueue->ExecuteCommandList(m_cmdContext->GetCommandList());
+  
+  m_display->Present();
+  
+  m_cmdQueue->WaitForPreviousFrame(fenceValue);
+  // ↑ Draw ↑
+}
+
+std::shared_ptr<D3D12Engine::Model> 
+  D3D12Engine::DirectX12Graphics::LoadModel(const std::string FilePath) {
+    auto Model = std::make_shared<D3D12Engine::Model>();
+
+    // ↓ TODO: Name stage ↓
+    m_cmdContext->Reset();
+    
+    Model->LoadModel(FilePath, m_device.Get(), *m_cmdContext);
+    
+    m_cmdContext->Close();
+    // ↑ TODO: Name stage ↑
+
+    // ↓ TODO: Name stage ↓
+    UINT64 fenceValue = m_cmdQueue->ExecuteCommandList(m_cmdContext->GetCommandList());
+    m_cmdQueue->WaitForPreviousFrame(fenceValue);
+    // ↑ TODO: Name stage ↑
+
+    return Model;
+  }
+
+std::shared_ptr<D3D12Engine::Texture>
+  D3D12Engine::DirectX12Graphics::LoadTexture(const std::string FilePath) {
+    auto Texture = std::make_shared<D3D12Engine::Texture>();
+
+    // ↓ TODO: Name stage ↓
+    m_cmdContext->Reset();
+    
+    Texture->LoadTexture(FilePath, m_device.Get(), *m_cmdContext);
+    
+    m_cmdContext->Close();
+    // ↑ TODO: Name stage ↑
+
+    // ↓ TODO: Name stage ↓
+    UINT64 fenceValue = m_cmdQueue->ExecuteCommandList(m_cmdContext->GetCommandList());
+    m_cmdQueue->WaitForPreviousFrame(fenceValue);
+    // ↑ TODO: Name stage ↑
+
+    return Texture;
+  }

@@ -12,7 +12,7 @@ void Camera::SetLensProperties(
   );
 }
 
-void Camera::InputProcessing(const float MovementSpeed, const float mouseSensivity) {
+void Camera::InputProcessing(const float MovementSpeed, const float MouseSensivity) {
   const float speed = 1.0F * MovementSpeed;
 
   if (Input::IsKeyDown('W')) { m_Transform.Forward( speed ); }
@@ -24,8 +24,8 @@ void Camera::InputProcessing(const float MovementSpeed, const float mouseSensivi
   Input::GetMouseDelta(mouseDx, mouseDy);
 
   if (mouseDx != 0.0F || mouseDy != 0.0F) {
-    m_Transform.RotateX(DirectX::XMConvertToRadians(mouseDy * mouseSensivity));
+    m_Transform.RotateX(DirectX::XMConvertToRadians(mouseDy * MouseSensivity));
     
-    m_Transform.RotateY(DirectX::XMConvertToRadians(mouseDx * mouseSensivity));
+    m_Transform.RotateY(DirectX::XMConvertToRadians(mouseDx * MouseSensivity));
   }
 }

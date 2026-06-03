@@ -4,8 +4,16 @@
 #include <string>
 #include <windows.h>
 
+#include <imgui.h>
+#include <imgui_impl_win32.h>
+#include <imgui_impl_dx12.h>
+#include <imgui_internal.h>
+
 #include <Application/Window/Window.hpp>
 #include <Application/Input/Input.hpp>
+
+#include <Framework/Scene/Scene.hpp>
+#include <Framework/EngineUI/EngineUI.hpp>
 
 #include <Renderer/IRenderer/IRenderer.hpp>
 #include <Renderer/D3D12Engine/Backend/DirectX12Graphics/DirectX12Graphics.hpp>
@@ -35,8 +43,10 @@ class Kernel {
   
   static IRenderer* GetRendererInstance() { return m_pRendererInstance; }
  private:
-  std::unique_ptr<Window> m_pWindow;
+  std::unique_ptr<Window>    m_pWindow;
   std::unique_ptr<IRenderer> m_pRenderer;
+  std::unique_ptr<Scene>     m_pScene;
+  std::unique_ptr<EngineUI>  m_pEngineUI;
 
   static inline UINT m_WindowWidth = 0;
   static inline UINT m_WindowHeight = 0;

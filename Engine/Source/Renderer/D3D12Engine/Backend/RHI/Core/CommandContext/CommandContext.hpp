@@ -1,7 +1,7 @@
 #pragma once
 
 #include <d3d12.h>
-#include <Renderer/D3D12Engine/Backend/RHI\Libraries\d3dx12.h>
+#include <d3dx12.h>
 #include <wrl/client.h>
 #include <vector>
 
@@ -9,6 +9,7 @@
 #include <Renderer/D3D12Engine/Backend/RHI/Resources/GpuResource/GpuResource.hpp>
 #include <Renderer/D3D12Engine/Backend/RHI/Resources/BackBuffer/BackBuffer.hpp>
 #include <Renderer/D3D12Engine/Backend/RHI/Resources/DepthBuffer/DepthBuffer.hpp>
+#include <Renderer/D3D12Engine/Backend/RHI/Resources/ColorBuffer/ColorBuffer.hpp>
 
 namespace D3D12Engine {
   class CommandContext {
@@ -23,6 +24,7 @@ namespace D3D12Engine {
     void FlushResourceBarriers();
     
     void ClearColor(BackBuffer& Target, const float* ClearColor);
+    void ClearColor(ColorBuffer& Target, const float* ClearColor);
     void ClearDepth(DepthBuffer& Target);
 
     void DrawIndexedInstanced(UINT indexCountPerInstance, UINT instanceCount,
@@ -43,6 +45,7 @@ namespace D3D12Engine {
 
     void SetRenderTargets(BackBuffer& rtv);
     void SetRenderTargets(BackBuffer& rtv, DepthBuffer& dsv);
+    void SetRenderTargets(ColorBuffer& rtv, DepthBuffer& dsv);
     
     void SetViewports(UINT numViewports, const D3D12_VIEWPORT* pViewport);
     void SetScissorRects(UINT numRectangles, const D3D12_RECT* pRectangles);
@@ -104,6 +107,13 @@ namespace D3D12Engine {
   }
 
   inline void CommandContext::SetRenderTargets(BackBuffer& rtv, DepthBuffer& dsv) {
+    D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = rtv.GetRTV();
+    D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = dsv.GetDSV();
+
+    m_cmdList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
+  }
+
+  inline void CommandContext::SetRenderTargets(ColorBuffer& rtv, DepthBuffer& dsv) {
     D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = rtv.GetRTV();
     D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = dsv.GetDSV();
 

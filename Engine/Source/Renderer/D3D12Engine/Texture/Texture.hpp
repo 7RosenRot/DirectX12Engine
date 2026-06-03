@@ -2,13 +2,13 @@
 
 #include <wrl/client.h>
 #include <d3d12.h>
+#include <d3dx12.h>
+#include <stb_image.h>
 #include <string>
 #include <iostream>
 #include <stdexcept>
 
 #include <Renderer/D3D12Engine/Backend/RHI/Core/CommandContext/CommandContext.hpp>
-#include <Renderer/D3D12Engine/Backend/RHI/Libraries/d3dx12.h>
-#include <Renderer/D3D12Engine/Backend/RHI/Libraries/stb_image.h>
 
 namespace D3D12Engine {
   class Texture {

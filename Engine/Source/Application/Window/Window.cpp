@@ -5,7 +5,13 @@
 #include <Application/Kernel/Kernel.hpp>
 #include <Application/Input/Input.hpp>
 
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
 LRESULT CALLBACK Window::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+  if (ImGui_ImplWin32_WndProcHandler(hwnd, msg, wParam, lParam)) {
+    return true;
+  }
+  
   IRenderer* renderWindow = Kernel::GetRendererInstance();
 
   switch (msg) {
@@ -41,7 +47,7 @@ LRESULT CALLBACK Window::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
     }
     return 0;
 
-  case WM_LBUTTONDOWN: {
+  case WM_RBUTTONDOWN: {
       Input::SetMouseLock(true);
     }
     return 0;
@@ -54,13 +60,11 @@ LRESULT CALLBACK Window::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
     return 0;
 
   case WM_PAINT: {
-      if (renderWindow != nullptr) {
-        renderWindow->OnUpdate();
-        
-        renderWindow->OnRender();
-      }
-
-      ValidateRect(hwnd, NULL);
+      PAINTSTRUCT ps;
+      HDC hdc = BeginPaint(hwnd, &ps);
+      // Мы ничего здесь не рисуем! Рендеринг идет в главном цикле Kernel::AppRun.
+      // Win32 API требует вызова BeginPaint и EndPaint, чтобы очистить флаг перерисовки.
+      EndPaint(hwnd, &ps);
     }
     return 0;
 

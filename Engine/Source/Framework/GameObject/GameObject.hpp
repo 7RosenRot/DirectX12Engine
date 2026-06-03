@@ -12,21 +12,13 @@
 class GameObject {
  public:
   GameObject(
-    const std::string& ModelPath   = "default",
-    const std::string& TexturePath = "default",
+    std::shared_ptr<D3D12Engine::Model> pModel,
+    std::shared_ptr<D3D12Engine::Texture> pTexture,
     const std::string& ObjectName  = "default"
   );
   ~GameObject() = default;
 
   // ↓ Model Pipeline ↓
-  void InitContext(
-    ID3D12Device* pDevice, D3D12Engine::CommandContext& rCommandContext
-  );
-  
-  void Draw(
-    D3D12Engine::CommandContext& rCommandContext
-  );
-
   void UpdateModelMatrix(
     DirectX::FXMMATRIX ModelView, DirectX::FXMMATRIX ModelProjection
   );
@@ -36,19 +28,23 @@ class GameObject {
   void SetObjectName(const std::string& ObjectName) {
     m_ObjectName = ObjectName;
   }
-  
-  void SetModelPath(const std::string& ModelPath) {
-    m_ModelPath = ModelPath;
-  }
-
-  void SetTexturePath(const std::string& TexturePath) {
-    m_TexturePath = TexturePath;
-  }
   // ↑ Setters ↑
 
   // ↓ Getters ↓
   Transform& GetTransform() {
     return m_Transform;
+  }
+
+  std::shared_ptr<D3D12Engine::Model>& GetModel() {
+    return m_Model;
+  }
+
+  DirectX::XMMATRIX& GetModelMatrix() {
+    return m_ModelMatrix;
+  }
+  
+  std::shared_ptr<D3D12Engine::Texture>& GetTexture() {
+    return m_Texture;
   }
   // ↑ Getters ↑
 
@@ -58,9 +54,7 @@ class GameObject {
   std::string m_ObjectName;
   
   std::shared_ptr<D3D12Engine::Model> m_Model;
-  std::string m_ModelPath;
   DirectX::XMMATRIX m_ModelMatrix;
   
   std::shared_ptr<D3D12Engine::Texture> m_Texture;
-  std::string m_TexturePath;
 };
