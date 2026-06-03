@@ -1,6 +1,6 @@
 # D3D12Engine - 3D Engine, supports loading and rendering 3D objects and base color textures. Uses default lighting.
 
-Available now...
+Work in progress...
 
 <p align="center">
   <img src="github/demo.gif" alt="Preview" width="600">
