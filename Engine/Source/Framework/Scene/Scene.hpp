@@ -7,7 +7,9 @@
 #include <Framework/Camera/Camera.hpp>
 #include <Framework/GameObject/GameObject.hpp>
 
-class IRenderer;
+namespace D3D12Engine {
+  class DirectX12Graphics;
+}
 
 class Scene {
  public:
@@ -16,7 +18,7 @@ class Scene {
 
   void AddGameObject(const std::string& ObjectName, std::shared_ptr<GameObject> pGameObject);
   void UpdateScene(float MovementSpeed, float MouseSensivity);
-  void RenderScene(IRenderer& rIRenderer);
+  void RenderScene(D3D12Engine::DirectX12Graphics& rRenderer);
   
   Camera& GetActiveCamera() {
     return m_ActiveCamera;

@@ -12,6 +12,7 @@ target_include_directories(Engine PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/Source/Renderer/D3D12Engine/Backend/RHI/Libraries
     ${CMAKE_CURRENT_SOURCE_DIR}/Source/Renderer/D3D12Engine/Backend/RHI/Libraries/imgui
     ${CMAKE_CURRENT_SOURCE_DIR}/Source/Renderer/D3D12Engine/Backend/RHI/Libraries/imgui/backends
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/Renderer/D3D12Engine/Backend/RHI/Libraries/imguizmo
 )
 
 target_link_libraries(Engine PRIVATE 

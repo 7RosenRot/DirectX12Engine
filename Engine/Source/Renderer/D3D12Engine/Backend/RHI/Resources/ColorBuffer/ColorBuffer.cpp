@@ -1,32 +1,24 @@
 #include <Renderer/D3D12Engine/Backend/RHI/Resources/ColorBuffer/ColorBuffer.hpp>
 
-void D3D12Engine::ColorBuffer::CreateScene(
+bool D3D12Engine::ColorBuffer::Initialize(
   ID3D12Device* pDevice,
   const std::wstring& SceneName,
   UINT SceneWidth,
   UINT SceneHeight,
+  DescriptorAllocator& RtvAllocator,
+  DescriptorAllocator& SrvAllocator,
   DXGI_FORMAT Format
 ) {
-  m_Format = Format;
-
   // ↓ RTV Heap ↓
-  D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
-  rtvHeapDesc.NumDescriptors = 1;
-  rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-  rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-
-  pDevice->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_RtvHeap));
-  m_RtvHandle = m_RtvHeap->GetCPUDescriptorHandleForHeapStart();
+  if (!m_RtvAllocation.IsValid()) {
+    m_RtvAllocation = RtvAllocator.Allocate();
+  }
   // ↑ RTV Heap ↑
 
   // ↓ SRV Heap ↓
-  D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
-  srvHeapDesc.NumDescriptors = 1;
-  srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-  srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-
-  pDevice->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_SrvHeap));
-  m_SrvHandle = m_SrvHeap->GetCPUDescriptorHandleForHeapStart();
+  if (!m_SrvAllocation.IsValid()) {
+    m_SrvAllocation = SrvAllocator.Allocate();
+  }
   // ↑ SRV Heap ↑
 
   D3D12_RESOURCE_DESC TextureDesc = {};
@@ -53,16 +45,17 @@ void D3D12Engine::ColorBuffer::CreateScene(
     D3D12_HEAP_FLAG_NONE,
     
     &TextureDesc,
-    D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+    D3D12_RESOURCE_STATE_COMMON,
     &ClearValue,
     
     IID_PPV_ARGS(&m_pResource)
   );
 
-  m_pResource->SetName(SceneName.c_str());
-  m_UsageState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-
-  pDevice->CreateRenderTargetView(m_pResource.Get(), nullptr, m_RtvHandle);
+  D3D12_RENDER_TARGET_VIEW_DESC RtvDesc = {};
+  RtvDesc.Format = Format;
+  RtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+  
+  pDevice->CreateRenderTargetView(m_pResource.Get(), &RtvDesc, m_RtvAllocation.CPU);
 
   D3D12_SHADER_RESOURCE_VIEW_DESC SrvDesc = {};
   SrvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
@@ -70,5 +63,30 @@ void D3D12Engine::ColorBuffer::CreateScene(
   SrvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
   SrvDesc.Texture2D.MipLevels = 1;
 
-  pDevice->CreateShaderResourceView(m_pResource.Get(), &SrvDesc, m_SrvHandle);
+  pDevice->CreateShaderResourceView(m_pResource.Get(), &SrvDesc, m_SrvAllocation.CPU);
+
+  if (m_pResource != nullptr) {
+    m_pResource->SetName(SceneName.c_str());
+  }
+
+  m_Format = Format;
+  
+  SetUsageState(D3D12_RESOURCE_STATE_COMMON);
+
+  return true;
+}
+
+void D3D12Engine::ColorBuffer::Shutdown(
+  DescriptorAllocator& RtvAllocator,
+  DescriptorAllocator& SrvAllocator
+) {
+  if (m_RtvAllocation.IsValid()) {
+    RtvAllocator.Free(m_RtvAllocation);
+  }
+
+  if (m_SrvAllocation.IsValid()) {
+    SrvAllocator.Free(m_SrvAllocation);
+  }
+
+  GpuResource::Shutdown();
 }

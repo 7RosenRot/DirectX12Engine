@@ -9,6 +9,7 @@
 #include <stdexcept>
 
 #include <Renderer/D3D12Engine/Backend/RHI/Core/CommandContext/CommandContext.hpp>
+#include <Renderer/D3D12Engine/Backend/RHI/Core/DescriptorAllocator/DescriptorAllocator.hpp>
 
 namespace D3D12Engine {
   class Texture {
@@ -19,7 +20,8 @@ namespace D3D12Engine {
     bool LoadTexture(
       const std::string& FilePath,
       ID3D12Device* pDevice,
-      CommandContext& rCommandContext
+      CommandContext& rCommandContext,
+      DescriptorAllocator& rSrvAllocator
     );
 
     void Bind(
@@ -33,6 +35,6 @@ namespace D3D12Engine {
    private:
     Microsoft::WRL::ComPtr<ID3D12Resource> m_Texture;
     Microsoft::WRL::ComPtr<ID3D12Resource> m_UploadHeap;
-    Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_srvHeap;
+    DescriptorAllocation m_SrvAllocation;
   };
 }

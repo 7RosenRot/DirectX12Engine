@@ -3,9 +3,13 @@
 
 #include <Renderer/D3D12Engine/Backend/RHI/Resources/GpuBuffer/GpuBuffer.hpp>
 
-void D3D12Engine::GpuBuffer::Create(ID3D12Device* pDevice, const std::wstring& name,
-  UINT sizeInBytes, const void* initialData) {
-  Destroy();
+void D3D12Engine::GpuBuffer::Create(
+  ID3D12Device* pDevice,
+  const std::wstring& name,
+  UINT sizeInBytes,
+  const void* initialData
+) {
+  Shutdown();
   
   m_BufferSize = sizeInBytes;
   
@@ -26,8 +30,12 @@ void D3D12Engine::GpuBuffer::Create(ID3D12Device* pDevice, const std::wstring& n
   }
 }
 
-void D3D12Engine::GpuBuffer::CreateUploadable(ID3D12Device* device, const std::wstring& name, UINT sizeInBytes) {
-  Destroy();
+void D3D12Engine::GpuBuffer::CreateUploadable(
+  ID3D12Device* device,
+  const std::wstring& name,
+  UINT sizeInBytes
+) {
+  Shutdown();
   m_BufferSize = sizeInBytes;
 
   device->CreateCommittedResource(

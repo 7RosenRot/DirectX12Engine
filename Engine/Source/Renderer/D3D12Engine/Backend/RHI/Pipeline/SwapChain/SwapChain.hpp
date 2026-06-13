@@ -3,6 +3,7 @@
 #include <dxgi1_6.h>
 #include <wrl/client.h>
 
+#include <Renderer/D3D12Engine/Backend/RHI/Core/DescriptorAllocator/DescriptorAllocator.hpp>
 #include <Renderer/D3D12Engine/Backend/RHI/Core/GraphicsCore/GraphicsCore.hpp>
 #include <Renderer/D3D12Engine/Backend/RHI/Resources/BackBuffer/BackBuffer.hpp>
 #include <Renderer/D3D12Engine/Backend/RHI/Resources/DepthBuffer/DepthBuffer.hpp>
@@ -14,12 +15,24 @@ namespace D3D12Engine {
     ~SwapChain() = default;
 
     // ↓ SwapChain (SwapChain) interaction ↓
-    void Initialize(ID3D12Device* pDevice, IDXGIFactory4* pFactory, ID3D12CommandQueue* pCmdQueue,
-      HWND hwnd, UINT WindowWidth, UINT WindowHeight);
+    void Initialize(
+      ID3D12Device* pDevice,
+      IDXGIFactory4* pFactory,
+      ID3D12CommandQueue* pCmdQueue,
+      HWND hwnd,
+      UINT WindowWidth,
+      UINT WindowHeight,
+      DescriptorAllocator& RtvAllocator
+    );
 
     void Present();
     
-    void Resize(ID3D12Device* pDevice, DepthBuffer& pDepthBuffer, UINT WindowWidth, UINT WindowHeight);
+    void Resize(
+      ID3D12Device* pDevice,
+      DescriptorAllocator& RtvAllocator,
+      UINT WindowWidth,
+      UINT WindowHeight
+    );
     // ↑ SwapChain (SwapChain) interaction ↑
 
     // ↓ Getters ↓
@@ -41,12 +54,10 @@ namespace D3D12Engine {
     // ↑ Getters ↑
 
    private:
-    UINT m_frameIndex{0};
     Microsoft::WRL::ComPtr<IDXGISwapChain3> m_swapChain;
-    
     BackBuffer m_renderTargetsResources[GraphicsCore::m_frameCount];
-    
-    Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_rtvDescriptorHeap;
-    UINT m_rtvDescriptorSize{0};
+   
+    DescriptorAllocation m_rtvAllocations[GraphicsCore::m_frameCount];
+    UINT m_frameIndex = 0;
   };
 }

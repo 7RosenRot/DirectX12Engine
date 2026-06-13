@@ -5,13 +5,19 @@
 namespace D3D12Engine {
   class BackBuffer : public GpuResource {
    public:
-    BackBuffer() : m_rtvHandle{0} {}
+    BackBuffer() = default;
+    ~BackBuffer() = default;
 
-    void CreateFromSwapChain(ID3D12Device* device, const std::wstring& name, ID3D12Resource* baseResource, D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle);
+    void CreateFromSwapChain(
+      ID3D12Device* device,
+      const std::wstring& name,
+      ID3D12Resource* baseResource,
+      D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle
+    );
 
-    D3D12_CPU_DESCRIPTOR_HANDLE GetRTV() const { return m_rtvHandle; }
+    D3D12_CPU_DESCRIPTOR_HANDLE GetRTV() const { return m_RtvAllocation; }
 
    private:
-    D3D12_CPU_DESCRIPTOR_HANDLE m_rtvHandle;
+    D3D12_CPU_DESCRIPTOR_HANDLE m_RtvAllocation = {0};
   };
 }

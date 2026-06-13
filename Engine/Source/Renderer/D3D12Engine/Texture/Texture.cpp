@@ -4,7 +4,8 @@
 bool D3D12Engine::Texture::LoadTexture(
   const std::string& FilePath,
   ID3D12Device* pDevice,
-  CommandContext& rCommandContext
+  CommandContext& rCommandContext,
+  DescriptorAllocator& rSrvAllocator
 ) {
   int imgWidth    = 1;
   int imgHeight   = 1;
@@ -70,11 +71,7 @@ bool D3D12Engine::Texture::LoadTexture(
   );
   rCommandContext.GetCommandList()->ResourceBarrier(1, &barrier);
 
-  D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
-  srvHeapDesc.NumDescriptors = 1;
-  srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-  srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-  pDevice->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_srvHeap));
+  m_SrvAllocation = rSrvAllocator.Allocate();
 
   D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
   srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
@@ -82,7 +79,7 @@ bool D3D12Engine::Texture::LoadTexture(
   srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
   srvDesc.Texture2D.MipLevels = 1;
   
-  pDevice->CreateShaderResourceView(m_Texture.Get(), &srvDesc, m_srvHeap->GetCPUDescriptorHandleForHeapStart());
+  pDevice->CreateShaderResourceView(m_Texture.Get(), &srvDesc, m_SrvAllocation.CPU);
 
   stbi_image_free(imageData);
 
@@ -93,13 +90,8 @@ void D3D12Engine::Texture::Bind(
   CommandContext& rCommandContext,
   UINT RootParameters
 ) {
-  if (m_srvHeap == nullptr) { return; }
-  
-  ID3D12DescriptorHeap* DescHeapArray[] = { m_srvHeap.Get() };
-  rCommandContext.GetCommandList()->SetDescriptorHeaps(1, DescHeapArray);
-
   rCommandContext.GetCommandList()->SetGraphicsRootDescriptorTable(
     RootParameters,
-    m_srvHeap->GetGPUDescriptorHandleForHeapStart()
+    m_SrvAllocation.GPU
   );
 }

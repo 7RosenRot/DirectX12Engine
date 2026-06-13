@@ -1,2 +1,5 @@
 build/
 .vscode/
+*.ini
+*.log
+dbgview64.exe

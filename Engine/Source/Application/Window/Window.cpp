@@ -12,7 +12,8 @@ LRESULT CALLBACK Window::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
     return true;
   }
   
-  IRenderer* renderWindow = Kernel::GetRendererInstance();
+  D3D12Engine::DirectX12Graphics* pRenderInstance = Kernel::GetRendererInstance();
+  Kernel* pKernelInstance = Kernel::GetKernelInstance();
 
   switch (msg) {
   case WM_GETMINMAXINFO: {
@@ -24,11 +25,19 @@ LRESULT CALLBACK Window::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
     return 0;
   
   case WM_SIZE: {
+      if (wParam == SIZE_MINIMIZED) {
+        return 0;
+      }
+
       UINT WindowWidth  = LOWORD(lParam);
       UINT WindowHeight = HIWORD(lParam);
 
-      if (renderWindow != nullptr) {
-        renderWindow->OnResize(WindowWidth, WindowHeight);
+      if (pRenderInstance != nullptr) {
+        pRenderInstance->OnResize(WindowWidth, WindowHeight);
+      }
+
+      if (pKernelInstance != nullptr) {
+        pKernelInstance->RenderFrame();
       }
     }
     return 0;
@@ -60,11 +69,9 @@ LRESULT CALLBACK Window::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
     return 0;
 
   case WM_PAINT: {
-      PAINTSTRUCT ps;
-      HDC hdc = BeginPaint(hwnd, &ps);
-      // Мы ничего здесь не рисуем! Рендеринг идет в главном цикле Kernel::AppRun.
-      // Win32 API требует вызова BeginPaint и EndPaint, чтобы очистить флаг перерисовки.
-      EndPaint(hwnd, &ps);
+      PAINTSTRUCT PaintStruct;
+      HDC hdc = BeginPaint(hwnd, &PaintStruct);
+      EndPaint(hwnd, &PaintStruct);
     }
     return 0;
 

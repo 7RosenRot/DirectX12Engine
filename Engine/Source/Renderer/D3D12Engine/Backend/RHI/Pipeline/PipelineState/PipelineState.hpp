@@ -10,6 +10,12 @@ namespace D3D12Engine {
     PSO(const wchar_t* Name) : m_Name(Name), m_pipelineState(nullptr) {}
     ~PSO() = default;
     
+    virtual void Shutdown() {
+      if (m_pipelineState) {
+        m_pipelineState.Reset();
+      }
+    }
+
     ID3D12PipelineState* GetPipelineState() const { return m_pipelineState.Get(); }
 
    protected:
