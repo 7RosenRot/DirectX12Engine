@@ -13,6 +13,12 @@
 namespace D3D12Engine {
   class Model {
    public:
+    struct Vertex {
+      DirectX::XMFLOAT3 Position;
+      DirectX::XMFLOAT2 Texture;
+      DirectX::XMFLOAT3 Normal;
+    };
+
     Model() = default;
     ~Model() = default;
 
@@ -26,13 +32,10 @@ namespace D3D12Engine {
       CommandContext&    rCommandContext
     );
 
-   private:
-    struct Vertex {
-      DirectX::XMFLOAT3 Position;
-      DirectX::XMFLOAT2 Texture;
-      DirectX::XMFLOAT3 Normal;
-    };
+    const std::vector<Vertex>& GetVertices() const { return m_Vertices; }
+    const std::vector<UINT>&   GetIndices() const { return m_Indices; }
 
+   private:
     GpuBuffer m_VertexBuffer;
     GpuBuffer m_IndexBuffer;
     
@@ -40,5 +43,8 @@ namespace D3D12Engine {
     D3D12_INDEX_BUFFER_VIEW m_IndexBufferView{};
     
     UINT m_IndexCount{0};
+
+    std::vector<Vertex> m_Vertices;
+    std::vector<UINT>   m_Indices;
   };
 }

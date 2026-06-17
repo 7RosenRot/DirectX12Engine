@@ -6,15 +6,20 @@
 namespace D3D12Engine {
   class CommandQueue {
    public:
-    CommandQueue(ID3D12Device* pDevice, D3D12_COMMAND_LIST_TYPE cmdListType);
+    CommandQueue(
+      ID3D12Device* pDevice,
+      D3D12_COMMAND_LIST_TYPE cmdListType
+    );
     ~CommandQueue();
 
     UINT64 ExecuteCommandList(ID3D12CommandList* pCmdList);
     UINT64 Signal();
+    
     void WaitForPreviousFrame(UINT64 fenceValue);
     void Flush();
 
     ID3D12CommandQueue* GetResource() const;
+    UINT64 GetCompletedFenceValue() const { return m_fence->GetCompletedValue(); }
     
    private:
     Microsoft::WRL::ComPtr<ID3D12CommandQueue> m_cmdQueue;

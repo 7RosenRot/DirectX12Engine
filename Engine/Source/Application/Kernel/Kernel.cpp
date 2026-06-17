@@ -31,11 +31,12 @@ void Kernel::AppInitialize(
   m_pAssetManager->Initialize(
     m_pRenderer->GetDevice(),
     m_pRenderer->GetSrvAllocator(),
-    m_pRenderer->GetCommandContext(),
+    m_pRenderer->GetContextPool(),
     m_pRenderer->GetCommandQueue()
   );
 
   m_pScene = std::make_unique<Scene>();
+  m_pScene->Initialize(m_pAssetManager.get());
   m_pScene->GetActiveCamera().GetTransform().SetPosition(0.0F, 3.5F, -10.0F);
 
   m_pEngineUI = std::make_unique<EngineUI>(
@@ -44,37 +45,11 @@ void Kernel::AppInitialize(
   m_pEngineUI->Initialize(
     m_pRenderer->GetDevice(),
     m_pRenderer->GetCommandQueueResource(),
-    2,
+    D3D12Engine::GraphicsCore::FrameCount,
     DXGI_FORMAT_R8G8B8A8_UNORM,
     *(m_pRenderer->GetSrvAllocator())
   );
 
-  // ↓ Load models ↓
-    m_pRenderer->GetCommandContext()->Reset();
-
-    // ↓ bastard_gun_corpus ↓  
-    auto bastard_gun_corpus_model = m_pAssetManager->LoadModel("Engine/Assets/Models/bastard_gun/bastard_gun_corpus.obj");
-    auto bastard_gun_corpus_texture = m_pAssetManager->LoadTexture("Engine/Assets/Models/bastard_gun/bastard_gun_corpus.png");
-    
-    auto bastard_gun_corpus = std::make_shared<GameObject>(bastard_gun_corpus_model, bastard_gun_corpus_texture, "bastard_gun_corpus");
-    bastard_gun_corpus->GetTransform().SetPosition(0.0F, 0.0F, 0.0F);
-
-    m_pScene->AddGameObject("bastard_gun_corpus", bastard_gun_corpus);
-    // ↑ bastard_gun_corpus ↑
-    
-    // ↓ bastard_gun_corob ↓
-    auto bastard_gun_corob_model = m_pAssetManager->LoadModel("Engine/Assets/Models/bastard_gun/bastard_gun_corob.obj");
-    auto bastard_gun_corob_texture = m_pAssetManager->LoadTexture("Engine/Assets/Models/bastard_gun/bastard_gun_corob.png");
-    
-    auto bastard_gun_corob = std::make_shared<GameObject>(bastard_gun_corob_model, bastard_gun_corob_texture, "bastard_gun_corob");
-    bastard_gun_corob->GetTransform().SetPosition(0.0F, 0.0F, 0.0F);
-
-    m_pScene->AddGameObject("bastard_gun_corob", bastard_gun_corob);
-    // ↑ bastard_gun_corob ↑
-
-    m_pAssetManager->ExexuteUploads();
-  // ↑ Load models ↑
-  
   m_AppRunning = true;
 }
 
@@ -111,11 +86,11 @@ void Kernel::RenderFrame() {
     m_pRenderer && m_pScene && m_pEngineUI
   ) {
     m_pEngineUI->UpdateLayout();
-    m_pScene->UpdateScene(0.10F, 0.05F);
+    m_pScene->UpdateScene(0.10F, 0.05F, m_pEngineUI->IsGizmoActive());
     
     m_pRenderer->BeginFrame();
     
-    m_pScene->RenderScene(*m_pRenderer);
+    m_pScene->RenderScene(*m_pRenderer, m_pEngineUI->GetSelectedObject());
     m_pRenderer->PrepareUIContext();
     
     m_pEngineUI->BeginUI();

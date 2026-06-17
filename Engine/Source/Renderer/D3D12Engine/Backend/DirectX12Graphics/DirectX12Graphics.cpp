@@ -89,12 +89,6 @@ void D3D12Engine::DirectX12Graphics::OnInitialize() {
   );
   // ↑ Initializing CommandQueue ↑
 
-  // ↓ Initializing CommandContext ↓
-  m_cmdContext = std::make_unique<CommandContext>(
-    m_device.Get(), D3D12_COMMAND_LIST_TYPE_DIRECT
-  );
-  // ↑ Initializing CommandContext ↑
-
   // ↓ Initializing SwapCahin ↓
   m_SwapChain = std::make_unique<SwapChain>();
 
@@ -107,6 +101,12 @@ void D3D12Engine::DirectX12Graphics::OnInitialize() {
     *m_RtvAllocator
   );
   // ↑ Initializing SwapCahin ↑
+
+  // ↓ Initializing CommandContext ↓
+  m_cmdContextPool = std::make_unique<CommandContextPool>(
+    m_device.Get(), m_SwapChain.get(), D3D12_COMMAND_LIST_TYPE_DIRECT
+  );
+  // ↑ Initializing CommandContext ↑
 
   // ↓ Loading Assets ↓
   LoadAssets();
@@ -125,11 +125,8 @@ void D3D12Engine::DirectX12Graphics::OnResize(UINT WindowWidth, UINT WindowHeigh
   m_WindowWidth = WindowWidth;
   m_WindowHeight = WindowHeight;
 
-  m_cmdQueue->Flush();
-
-  if (m_cmdContext != nullptr) {
-    m_cmdContext->Reset();
-    m_cmdContext->Close();
+  if (m_cmdQueue != nullptr) {
+    m_cmdQueue->Flush();
   }
 
   m_SwapChain->Resize(m_device.Get(), *m_RtvAllocator, WindowWidth, WindowHeight);
@@ -144,10 +141,12 @@ void D3D12Engine::DirectX12Graphics::OnDestroy() {
   m_SceneTexture.Shutdown(*m_RtvAllocator, *m_SrvAllocator);
   
   m_SwapChain.reset();
-  m_cmdContext.reset();
+  m_pFrameContext = nullptr;
+  m_cmdContextPool.reset();
   m_cmdQueue.reset();
 
   m_pipelineState.Shutdown();
+  m_outlinePipelineState.Shutdown();
   m_rootSignature.Shutdown();
 
   m_SrvAllocator.reset();
@@ -223,15 +222,23 @@ void D3D12Engine::DirectX12Graphics::LoadAssets() {
 #else
   UINT compileFlags{0};
 #endif
+  
+#pragma region Set Up Shaders
+  HRESULT hResult = 0;
 
-  // ↓ Shader Compilation ↓
-  HRESULT hResult{0};
-
+  D3D12_INPUT_ELEMENT_DESC inputElementDescriptor[] = {
+    { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0,  D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+    { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,    0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+    { "NORMAL",   0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 20, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+  };
+  
+#pragma region Vertex & Pixel Shader Compilation
   std::wstring vtxShaderPath = L"Engine/Assets/Shaders/D3D12/VertexShader.hlsl";
-  if (!std::filesystem::exists(vtxShaderPath)) { OutputDebugStringW((L"ERROR: File not found - " + vtxShaderPath + L'\n').c_str()); }
+  if (!std::filesystem::exists(vtxShaderPath)) {
+    OutputDebugStringW((L"ERROR: File not found - " + vtxShaderPath + L'\n').c_str());
+  }
 
-  Microsoft::WRL::ComPtr<ID3DBlob> vertexShader;
-  Microsoft::WRL::ComPtr<ID3DBlob> vtxErrorBuffer;
+  Microsoft::WRL::ComPtr<ID3DBlob> vertexShader, vtxErrorBuffer;
 
   hResult = D3DCompileFromFile(
     vtxShaderPath.c_str(),
@@ -250,10 +257,11 @@ void D3D12Engine::DirectX12Graphics::LoadAssets() {
   }
 
   std::wstring pxlShaderPath = L"Engine/Assets/Shaders/D3D12/PixelShader.hlsl";
-  if (!std::filesystem::exists(pxlShaderPath)) { OutputDebugStringW((L"ERROR: File not found - " + pxlShaderPath + L'\n').c_str()); }
+  if (!std::filesystem::exists(pxlShaderPath)) {
+    OutputDebugStringW((L"ERROR: File not found - " + pxlShaderPath + L'\n').c_str());
+  }
 
-  Microsoft::WRL::ComPtr<ID3DBlob> pixelShader;
-  Microsoft::WRL::ComPtr<ID3DBlob> pxlErrorBuffer;
+  Microsoft::WRL::ComPtr<ID3DBlob> pixelShader, pxlErrorBuffer;
 
   hResult = D3DCompileFromFile(
     pxlShaderPath.c_str(),
@@ -270,23 +278,142 @@ void D3D12Engine::DirectX12Graphics::LoadAssets() {
 
     throw std::runtime_error("Pixel Shader compilation has failed!");
   }
-  // ↑ Shader Compilation ↑
+#pragma endregion
 
-  D3D12_INPUT_ELEMENT_DESC inputElementDescriptor[] = {
-    { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,  0 },
-    { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,    0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-    { "NORMAL",   0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 20, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
-  };
-
+#pragma region Vertex & Pixel Shader Set Up PSO
   m_pipelineState.SetRootSignature(m_rootSignature);
-  m_pipelineState.SetVertexShader(vertexShader->GetBufferPointer(), vertexShader->GetBufferSize());
-  m_pipelineState.SetPixelShader(pixelShader->GetBufferPointer(), pixelShader->GetBufferSize());
-  m_pipelineState.SetInputLayout(_countof(inputElementDescriptor), inputElementDescriptor);
+  
+  m_pipelineState.SetVertexShader(
+    vertexShader->GetBufferPointer(), vertexShader->GetBufferSize()
+  );
+  
+  m_pipelineState.SetPixelShader(
+    pixelShader->GetBufferPointer(), pixelShader->GetBufferSize()
+  );
+  
+  m_pipelineState.SetInputLayout(
+    _countof(inputElementDescriptor), inputElementDescriptor
+  );
+  
   m_pipelineState.SetCullMode(D3D12_CULL_MODE_BACK);
+  
   m_pipelineState.SetFrontCounterClockwise(true);
+  
   m_pipelineState.SetDepthTest(true);
-  m_pipelineState.SetRenderTargetFormat(DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_D32_FLOAT);
+  
+  m_pipelineState.SetStencilTest(
+    true,
+    D3D12_COMPARISON_FUNC_ALWAYS,
+    D3D12_STENCIL_OP_KEEP,
+    D3D12_STENCIL_OP_KEEP,
+    D3D12_STENCIL_OP_REPLACE,
+    0xFF,
+    0xFF
+  );
+  
+  m_pipelineState.SetRenderTargetFormat(
+    DXGI_FORMAT_R8G8B8A8_UNORM,
+    DXGI_FORMAT_D24_UNORM_S8_UINT
+  );
+  
   m_pipelineState.Finalize(m_device.Get());
+#pragma endregion
+
+#pragma region Outline Vertex & Pixel Shader Compilation
+  std::wstring outVtxShaderPath = L"Engine/Assets/Shaders/D3D12/OutlineVertexShader.hlsl";
+  if (!std::filesystem::exists(outVtxShaderPath)) {
+    OutputDebugStringW((L"ERROR: File not found - " + outVtxShaderPath + L'\n').c_str());
+  }
+  
+  Microsoft::WRL::ComPtr<ID3DBlob> outVtxShader, outVtxErrorBuffer;
+  
+  hResult = D3DCompileFromFile(
+    outVtxShaderPath.c_str(),
+    nullptr, nullptr,
+    "VSMain", "vs_5_0",
+    compileFlags, 0,
+    &outVtxShader, &outVtxErrorBuffer
+  );
+
+  if (FAILED(hResult)) {
+    if (outVtxErrorBuffer) {
+      OutputDebugStringA(reinterpret_cast<const char*>(outVtxErrorBuffer->GetBufferPointer()));
+    }
+    
+    throw std::runtime_error("Outline Vertex Shader compilation has failed!");
+  }
+
+  std::wstring outPxlShaderPath = L"Engine/Assets/Shaders/D3D12/OutlinePixelShader.hlsl";
+  if (!std::filesystem::exists(outPxlShaderPath)) {
+    OutputDebugStringW((L"ERROR: File not found - " + outPxlShaderPath + L'\n').c_str());
+  }
+
+  Microsoft::WRL::ComPtr<ID3DBlob> outPxlShader, outPxlErrorBuffer;
+  
+  hResult = D3DCompileFromFile(
+    outPxlShaderPath.c_str(),
+    nullptr, nullptr,
+    "PSMain", "ps_5_0",
+    compileFlags, 0,
+    &outPxlShader, &outPxlErrorBuffer
+  );
+  
+  if (FAILED(hResult)) {
+    if (outPxlErrorBuffer) {
+      OutputDebugStringA(reinterpret_cast<const char*>(outPxlErrorBuffer->GetBufferPointer()));
+    }
+    
+    throw std::runtime_error("Outline Pixel Shader compilation has failed!");
+  }
+#pragma endregion
+
+#pragma region Outline Vertex & Pixel Shader Set Up PSO
+  m_outlinePipelineState.SetRootSignature(m_rootSignature);
+  
+  m_outlinePipelineState.SetVertexShader(
+    outVtxShader->GetBufferPointer(), outVtxShader->GetBufferSize()
+  );
+
+  m_outlinePipelineState.SetPixelShader(
+    outPxlShader->GetBufferPointer(), outPxlShader->GetBufferSize()
+  );
+  
+  m_outlinePipelineState.SetInputLayout(
+    _countof(inputElementDescriptor), inputElementDescriptor
+  );
+  
+  m_outlinePipelineState.SetCullMode(
+    D3D12_CULL_MODE_FRONT
+  );
+  
+  m_outlinePipelineState.SetFrontCounterClockwise(true);
+  
+  m_outlinePipelineState.SetDepthTest(true);
+  
+  m_outlinePipelineState.SetDepthFunc(
+    D3D12_COMPARISON_FUNC_LESS_EQUAL
+  );
+  
+  m_outlinePipelineState.SetStencilTest(
+    true,
+    D3D12_COMPARISON_FUNC_NOT_EQUAL,
+    D3D12_STENCIL_OP_KEEP,
+    D3D12_STENCIL_OP_KEEP,
+    D3D12_STENCIL_OP_KEEP, 
+    0xFF,
+    0x00
+  );
+  
+  m_outlinePipelineState.SetRenderTargetFormat(
+    DXGI_FORMAT_R8G8B8A8_UNORM,
+    DXGI_FORMAT_D24_UNORM_S8_UINT
+  );
+  
+  m_outlinePipelineState.Finalize(
+    m_device.Get()
+  );
+#pragma endregion
+#pragma endregion
 }
 
 void D3D12Engine::DirectX12Graphics::ResizeViewport(
@@ -320,32 +447,33 @@ void D3D12Engine::DirectX12Graphics::ResizeViewport(
   m_DepthBuffer.Create(
     m_device.Get(), L"MainDepthBuffer",
     m_ViewportWidth, m_ViewportHeight,
-    *m_DsvAllocator
+    *m_DsvAllocator,
+    DXGI_FORMAT_D24_UNORM_S8_UINT
   );
 }
 
 void D3D12Engine::DirectX12Graphics::BeginFrame() {
   // ↓ Prepare Pipeline ↓
-  m_cmdQueue->Flush();
-  m_cmdContext->Reset();
+  UINT64 completedFenceValue = m_cmdQueue->GetCompletedFenceValue();
+  m_pFrameContext = m_cmdContextPool->Allocate(completedFenceValue);
   // ↑ Prepare Pipeline ↑
 
   // ↓ Set Heaps ↓
   ID3D12DescriptorHeap* heaps[] = { m_SrvAllocator->GetHeap() };
-  m_cmdContext->GetCommandList()->SetDescriptorHeaps(_countof(heaps), heaps);
+  m_pFrameContext->GetCommandList()->SetDescriptorHeaps(_countof(heaps), heaps);
   // ↑ Set Heaps ↑
   
   // ↓ Barrier ↓
-  m_cmdContext->TransitionResource(m_SceneTexture, D3D12_RESOURCE_STATE_RENDER_TARGET);
-  m_cmdContext->FlushResourceBarriers();
+  m_pFrameContext->TransitionResource(m_SceneTexture, D3D12_RESOURCE_STATE_RENDER_TARGET);
+  m_pFrameContext->FlushResourceBarriers();
   // ↑ Barrier ↑
 
   // ↓ Clean Up ↓
   const float ClearColor[] = { 0.1f, 0.1f, 0.1f, 1.0f };
-  m_cmdContext->ClearColor(m_SceneTexture, ClearColor);
-  m_cmdContext->ClearDepth(m_DepthBuffer);
+  m_pFrameContext->ClearColor(m_SceneTexture, ClearColor);
+  m_pFrameContext->ClearDepth(m_DepthBuffer);
 
-  m_cmdContext->SetRenderTargets(m_SceneTexture, m_DepthBuffer);
+  m_pFrameContext->SetRenderTargets(m_SceneTexture, m_DepthBuffer);
   // ↑ Clean Up ↑
 
   // ↓ Set up Viewport & ScissorRect ↓
@@ -360,55 +488,71 @@ void D3D12Engine::DirectX12Graphics::BeginFrame() {
     static_cast<long>(m_ViewportWidth), static_cast<long>(m_ViewportHeight)
   };
 
-  m_cmdContext->SetViewports(1, &viewPort);
-  m_cmdContext->SetScissorRects(1, &scissorRect);
+  m_pFrameContext->SetViewports(1, &viewPort);
+  m_pFrameContext->SetScissorRects(1, &scissorRect);
   // ↑ Set up Viewport & ScissorRect ↑
 
-  m_cmdContext->SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-  m_cmdContext->SetGraphicsRootSignature(m_rootSignature.Get());
-  m_cmdContext->SetPipelineState(m_pipelineState.GetPipelineState());
+  m_pFrameContext->SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+  m_pFrameContext->SetGraphicsRootSignature(m_rootSignature.Get());
+  m_pFrameContext->SetPipelineState(m_pipelineState.GetPipelineState());
 }
 
 void D3D12Engine::DirectX12Graphics::DrawFrame(
   D3D12Engine::Model& rModel,
   D3D12Engine::Texture& rTexture,
-  const DirectX::XMMATRIX& rViewProjectionMatrix
+  const DirectX::XMMATRIX& rViewProjectionMatrix,
+  bool isSelected
 ) {
-  rTexture.Bind(*m_cmdContext, 1);
+  rTexture.Bind(*m_pFrameContext, 1);
 
-  m_cmdContext->GetCommandList()->SetGraphicsRoot32BitConstants(0, 16, &rViewProjectionMatrix, 0);
+  m_pFrameContext->GetCommandList()->SetGraphicsRoot32BitConstants(0, 16, &rViewProjectionMatrix, 0);
 
-  rModel.DrawModel(*m_cmdContext);
+  // Set Stencil Reference to 1 before drawing the normal model
+  m_pFrameContext->GetCommandList()->OMSetStencilRef(1);
+
+  rModel.DrawModel(*m_pFrameContext);
+
+  if (isSelected) {
+    m_pFrameContext->SetPipelineState(m_outlinePipelineState.GetPipelineState());
+    rModel.DrawModel(*m_pFrameContext);
+    
+    // Restore normal pipeline state
+    m_pFrameContext->SetPipelineState(m_pipelineState.GetPipelineState());
+  }
 }
 
 void D3D12Engine::DirectX12Graphics::EndFrame() {
-  auto& currentBackBuffer = m_SwapChain->GetCurrentBackBufferIndex();
+  auto& CurrentBackBuffer = m_SwapChain->GetCurrentBackBufferIndex();
   
   // ↓ Barrier ↓
-  m_cmdContext->TransitionResource(currentBackBuffer, D3D12_RESOURCE_STATE_PRESENT);
-  m_cmdContext->FlushResourceBarriers();
+  m_pFrameContext->TransitionResource(CurrentBackBuffer, D3D12_RESOURCE_STATE_PRESENT);
+  m_pFrameContext->FlushResourceBarriers();
   // ↑ Barrier ↑
 
-  m_cmdContext->Close();
+  m_pFrameContext->Close();
 
   // ↓ Draw ↓
-  UINT64 fenceValue = m_cmdQueue->ExecuteCommandList(m_cmdContext->GetCommandList());
+  UINT64 fenceValue = m_cmdQueue->ExecuteCommandList(m_pFrameContext->GetCommandList());
+
+    // ↓ Free Context ↓
+    m_pFrameContext->SetFenceValue(fenceValue);
+    m_cmdContextPool->Free(m_pFrameContext);
+    m_pFrameContext = nullptr;
+    // ↑ Free Context ↑
   
-  m_SwapChain->Present();
-  
-  m_cmdQueue->WaitForPreviousFrame(fenceValue);
+  m_SwapChain->Present(*m_cmdQueue);
   // ↑ Draw ↑
 }
 
 void D3D12Engine::DirectX12Graphics::PrepareUIContext() {
-  m_cmdContext->TransitionResource(m_SceneTexture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+  m_pFrameContext->TransitionResource(m_SceneTexture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
-  auto& currentBackBuffer = m_SwapChain->GetCurrentBackBufferIndex();
-  m_cmdContext->TransitionResource(currentBackBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET);
+  auto& CurrentBackBuffer = m_SwapChain->GetCurrentBackBufferIndex();
+  m_pFrameContext->TransitionResource(CurrentBackBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET);
   
-  m_cmdContext->FlushResourceBarriers();
+  m_pFrameContext->FlushResourceBarriers();
 
   const float ClearColor[] = { 0.1f, 0.1f, 0.1f, 1.0f };
-  m_cmdContext->ClearColor(currentBackBuffer, ClearColor);
-  m_cmdContext->SetRenderTargets(currentBackBuffer);
+  m_pFrameContext->ClearColor(CurrentBackBuffer, ClearColor);
+  m_pFrameContext->SetRenderTargets(CurrentBackBuffer);
 }

@@ -6,7 +6,7 @@
 
 namespace D3D12Engine {
   namespace GraphicsCore {
-    const UINT m_frameCount = 2;
+    static const UINT FrameCount = 3;
     const DXGI_FORMAT BackBufferFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
     const DXGI_FORMAT DepthBufferFormat = DXGI_FORMAT_D32_FLOAT;
   }

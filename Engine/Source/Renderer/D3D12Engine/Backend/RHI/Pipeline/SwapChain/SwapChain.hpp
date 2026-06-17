@@ -7,6 +7,7 @@
 #include <Renderer/D3D12Engine/Backend/RHI/Core/GraphicsCore/GraphicsCore.hpp>
 #include <Renderer/D3D12Engine/Backend/RHI/Resources/BackBuffer/BackBuffer.hpp>
 #include <Renderer/D3D12Engine/Backend/RHI/Resources/DepthBuffer/DepthBuffer.hpp>
+#include <Renderer/D3D12Engine/Backend/RHI/Pipeline/CommandQueue/CommandQueue.hpp>
 
 namespace D3D12Engine {
   class SwapChain {
@@ -25,7 +26,7 @@ namespace D3D12Engine {
       DescriptorAllocator& RtvAllocator
     );
 
-    void Present();
+    void Present(CommandQueue& rCmdQueue);
     
     void Resize(
       ID3D12Device* pDevice,
@@ -55,9 +56,10 @@ namespace D3D12Engine {
 
    private:
     Microsoft::WRL::ComPtr<IDXGISwapChain3> m_swapChain;
-    BackBuffer m_renderTargetsResources[GraphicsCore::m_frameCount];
+    BackBuffer m_renderTargetsResources[GraphicsCore::FrameCount];
    
-    DescriptorAllocation m_rtvAllocations[GraphicsCore::m_frameCount];
+    DescriptorAllocation m_rtvAllocations[GraphicsCore::FrameCount];
     UINT m_frameIndex = 0;
+    UINT64 m_fenceValues[GraphicsCore::FrameCount] = { 0 };
   };
 }

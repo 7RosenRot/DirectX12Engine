@@ -37,6 +37,8 @@ namespace D3D12Engine {
     ID3D12GraphicsCommandList* GetCommandList() const {
       return m_cmdList.Get();
     }
+    void SetFenceValue(UINT64 fenceValue) { m_fenceValue = fenceValue; }
+    UINT64 GetFenceValue() const { return m_fenceValue; }
     // ↑ Getters ↑
     
     // ↓ Setters ↓
@@ -66,6 +68,8 @@ namespace D3D12Engine {
     
     // ↓ Extended to process 3D models ↓
     std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> m_TempUploadBuffers;
+
+    UINT64 m_fenceValue = 0;
   };
 
   inline void CommandContext::Reset() {

@@ -24,6 +24,15 @@ namespace D3D12Engine {
       DescriptorAllocator& rSrvAllocator
     );
 
+    void LoadFromMemory(
+      const void* pData,
+      UINT Width,
+      UINT Height,
+      ID3D12Device* pDevice,
+      D3D12Engine::CommandContext& rUploadContext,
+      DescriptorAllocator& rSrvAllocator
+    );
+
     void Bind(
       CommandContext& rCommandContext,
       UINT RootParameters
@@ -32,6 +41,10 @@ namespace D3D12Engine {
     ID3D12Resource* GetResource() {
       return m_Texture.Get();
     }
+
+    D3D12_GPU_DESCRIPTOR_HANDLE GetSrvHandle() const { 
+    return m_SrvAllocation.GPU; 
+  }
    private:
     Microsoft::WRL::ComPtr<ID3D12Resource> m_Texture;
     Microsoft::WRL::ComPtr<ID3D12Resource> m_UploadHeap;

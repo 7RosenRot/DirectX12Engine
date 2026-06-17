@@ -2,7 +2,10 @@
 
 D3D12Engine::DescriptorAllocator::DescriptorAllocator(
   ID3D12Device* pDevice, D3D12_DESCRIPTOR_HEAP_TYPE HeapType, uint32_t NumDescriptors
-) : m_HeapType(HeapType), m_NumDescriptors(NumDescriptors), m_CrtDescriptor(0)
+) :
+  m_HeapType(HeapType),
+  m_NumDescriptors(NumDescriptors),
+  m_CrtDescriptor(0)
 {
   D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
   heapDesc.Type = m_HeapType;
@@ -21,11 +24,13 @@ D3D12Engine::DescriptorAllocation D3D12Engine::DescriptorAllocator::Allocate() {
 
   if (!m_FreeIndicies.empty()) {
     Index = m_FreeIndicies.front();
+    
     m_FreeIndicies.pop();
   } else {
     if (m_CrtDescriptor >= m_NumDescriptors) {
       throw std::runtime_error("Descriptor Heap is full");
     }
+    
     Index = m_CrtDescriptor++;
   }
 
@@ -36,7 +41,7 @@ D3D12Engine::DescriptorAllocation D3D12Engine::DescriptorAllocator::Allocate() {
   Allocation.CPU.ptr += static_cast<SIZE_T>(Index) * m_SizeDescriptor;
 
   if (m_HeapType == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) {
-    Allocation.GPU = m_Heap->GetGPUDescriptorHandleForHeapStart();
+    Allocation.GPU = m_Heap->GetGPUDescriptorHandleForHeapStart();  
     Allocation.GPU.ptr += static_cast<UINT64>(Index) * m_SizeDescriptor;
   }
 

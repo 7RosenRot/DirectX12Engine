@@ -2,6 +2,15 @@
 
 #include <Renderer/D3D12Engine/Backend/RHI/Resources/DepthBuffer/DepthBuffer.hpp>
 
+D3D12Engine::DepthBuffer::DepthBuffer(
+  float clearDepth,
+  UINT8 clearStencil
+) :
+  m_Format(DXGI_FORMAT_UNKNOWN),
+  m_ClearDepth(clearDepth),
+  m_ClearStencil(clearStencil)
+{}
+
 void D3D12Engine::DepthBuffer::Create(
   ID3D12Device* device,
   const std::wstring& name,

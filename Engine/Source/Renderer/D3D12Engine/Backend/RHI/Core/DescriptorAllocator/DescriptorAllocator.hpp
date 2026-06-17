@@ -19,7 +19,9 @@ namespace D3D12Engine {
   class DescriptorAllocator {
    public:
     DescriptorAllocator(
-      ID3D12Device* pDevice, D3D12_DESCRIPTOR_HEAP_TYPE HeapType, uint32_t numDescriptors
+      ID3D12Device* pDevice,
+      D3D12_DESCRIPTOR_HEAP_TYPE HeapType,
+      uint32_t numDescriptors
     );
     ~DescriptorAllocator() = default;
 

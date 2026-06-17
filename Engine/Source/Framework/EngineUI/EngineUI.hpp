@@ -1,18 +1,23 @@
 #pragma once
 
 #include <string>
+#include <memory>
 
 #include <imgui.h>
+#include <ImGuizmo.h>
 #include <imgui_impl_win32.h>
 #include <imgui_impl_dx12.h>
 #include <imgui_internal.h>
 
 #include <Renderer/D3D12Engine/Backend/RHI/Core/DescriptorAllocator/DescriptorAllocator.hpp>
+#include <Framework/History/CommandHistory.hpp>
 
 namespace D3D12Engine {
   class DirectX12Graphics;
 }
+class GameObject;
 class Scene;
+class AssetManager;
 
 class EngineUI {
  public:
@@ -34,8 +39,21 @@ class EngineUI {
   void DrawUI();
   void EndUI();
 
+  // ↓ Gizmo Query ↓
+  bool IsGizmoActive() const {
+    return m_GizmoActive;
+  }
+  // ↑ Gizmo Query ↑
+
+  // ↓ Selection Query ↓
+  std::shared_ptr<GameObject> GetSelectedObject() const {
+    return m_SelectedObject;
+  }
+  // ↑ Selection Query ↑
+
  private:
   HWND m_hwnd;
+  std::shared_ptr<GameObject> m_SelectedObject = nullptr;
   D3D12Engine::DirectX12Graphics* m_pRenderer;
   Scene* m_pScene;
   
@@ -45,8 +63,26 @@ class EngineUI {
 
   D3D12Engine::DescriptorAllocation m_FontAllocation;
 
+  // ↓ Gizmo State ↓
+  int    m_GizmoType         = -1;
+  bool   m_GizmoActive       = false;
+  ImVec2 m_ViewportBoundsMin = { 0.0f, 0.0f };
+  ImVec2 m_ViewportBoundsMax = { 0.0f, 0.0f };
+
+  // ↓ Undo/Redo State ↓
+  CommandHistory m_CommandHistory;
+  Transform m_GizmoInitialTransform;
+  bool m_GizmoWasUsing = false;
+  
+  Transform m_PropertiesInitialTransform;
+  bool m_PropertiesEditing = false;
+  // ↑ Undo/Redo State ↑
+  // ↑ Gizmo State ↑
+
   void DrawDockSpace();
+  void DrawProjectUI();
   void DrawViewportUI();
   void DrawBrowserUI();
   void DrawPropertiesUI();
+  void DrawGizmo();
 };

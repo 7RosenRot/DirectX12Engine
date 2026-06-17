@@ -1,7 +1,91 @@
 #include <Framework/EngineUI/EngineUI.hpp>
 #include <Framework/Scene/Scene.hpp>
+#include <Framework/AssetManager/AssetManager.hpp>
 #include <Renderer/D3D12Engine/Backend/DirectX12Graphics/DirectX12Graphics.hpp>
 #include <Renderer/D3D12Engine/Backend/RHI/Core/DescriptorAllocator/DescriptorAllocator.hpp>
+#include <Renderer/D3D12Engine/Model/Model.hpp>
+#include <Application/Input/Input.hpp>
+#include <windows.h>
+#include <commdlg.h>
+
+static std::string OpenFileDialog(HWND hwnd, const char* Filter) {
+  OPENFILENAMEA OFN;
+  
+  CHAR File[260] = {0};
+  
+  ZeroMemory(&OFN, sizeof(OPENFILENAMEA));
+
+  OFN.lStructSize = sizeof(OPENFILENAMEA);
+  OFN.hwndOwner = hwnd;
+  OFN.lpstrFile = File;
+  OFN.nMaxFile = sizeof(File);
+  OFN.lpstrFilter = Filter;
+  OFN.nFilterIndex = 1;
+  OFN.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR;
+
+  if (GetOpenFileNameA(&OFN) == TRUE) {
+    return std::string(OFN.lpstrFile);
+  }
+
+  return std::string();
+}
+
+static std::string SaveFileDialog(HWND hwnd, const char* Filter) {
+  OPENFILENAMEA OFN;
+  CHAR File[260] = {0};
+  ZeroMemory(&OFN, sizeof(OPENFILENAMEA));
+
+  OFN.lStructSize = sizeof(OPENFILENAMEA);
+  OFN.hwndOwner = hwnd;
+  OFN.lpstrFile = File;
+  OFN.nMaxFile = sizeof(File);
+  OFN.lpstrFilter = Filter;
+  OFN.nFilterIndex = 1;
+  OFN.Flags = OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT | OFN_NOCHANGEDIR;
+  OFN.lpstrDefExt = "rose";
+
+  if (GetSaveFileNameA(&OFN) == TRUE) {
+    return std::string(OFN.lpstrFile);
+  }
+
+  return std::string();
+}
+
+static bool RayTriangleIntersect(
+  DirectX::FXMVECTOR rayOrigin, DirectX::FXMVECTOR rayDir,
+  DirectX::FXMVECTOR V0, DirectX::GXMVECTOR V1, DirectX::CXMVECTOR V2,
+  float& outIntersectionDistance
+) {
+  const float EPSILON = 1e-6f;
+  DirectX::XMVECTOR edge1 = DirectX::XMVectorSubtract(V1, V0);
+  DirectX::XMVECTOR edge2 = DirectX::XMVectorSubtract(V2, V0);
+  DirectX::XMVECTOR h = DirectX::XMVector3Cross(rayDir, edge2);
+  DirectX::XMVECTOR aVec = DirectX::XMVector3Dot(edge1, h);
+  float a = DirectX::XMVectorGetX(aVec);
+  if (a > -EPSILON && a < EPSILON) {
+    return false; // Ray is parallel to triangle.
+  }
+  float f = 1.0f / a;
+  DirectX::XMVECTOR s = DirectX::XMVectorSubtract(rayOrigin, V0);
+  DirectX::XMVECTOR uVec = DirectX::XMVectorMultiply(DirectX::XMVector3Dot(s, h), DirectX::XMVectorReplicate(f));
+  float u = DirectX::XMVectorGetX(uVec);
+  if (u < 0.0f || u > 1.0f) {
+    return false;
+  }
+  DirectX::XMVECTOR q = DirectX::XMVector3Cross(s, edge1);
+  DirectX::XMVECTOR vVec = DirectX::XMVectorMultiply(DirectX::XMVector3Dot(rayDir, q), DirectX::XMVectorReplicate(f));
+  float v = DirectX::XMVectorGetX(vVec);
+  if (v < 0.0f || u + v > 1.0f) {
+    return false;
+  }
+  DirectX::XMVECTOR tVec = DirectX::XMVectorMultiply(DirectX::XMVector3Dot(edge2, q), DirectX::XMVectorReplicate(f));
+  float t = DirectX::XMVectorGetX(tVec);
+  if (t > EPSILON) {
+    outIntersectionDistance = t;
+    return true;
+  }
+  return false;
+}
 
 ImGuiWindowFlags WindowFlags = {
   ImGuiWindowFlags_NoMove     |
@@ -108,10 +192,31 @@ void EngineUI::BeginUI() {
   ImGui_ImplDX12_NewFrame();
   ImGui_ImplWin32_NewFrame();
   ImGui::NewFrame();
+
+  // ↓ Скрываем курсор от ImGui в режиме управления камерой ↓
+  // Пока мышь захвачена (ПКМ зажат), курсор физически находится в центре экрана,
+  // что может ложно активировать hover/click на виджетах (гизмо, кнопки тулбара).
+  // Установка (-FLT_MAX, -FLT_MAX) — официальный способ сообщить ImGui
+  // что курсор недоступен, без отключения всей системы ввода.
+  if (Input::IsMouseLocked()) {
+    ImGui::GetIO().MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
+  }
+  // ↑ Скрываем курсор от ImGui в режиме управления камерой ↑
+
+  ImGuizmo::BeginFrame();
 }
 
 void EngineUI::DrawUI() {
+  ImGuiIO& io = ImGui::GetIO();
+  if (io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_Z, false)) {
+    m_CommandHistory.Undo();
+  }
+  if (io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_Y, false)) {
+    m_CommandHistory.Redo();
+  }
+
   DrawDockSpace();
+  DrawProjectUI();
   DrawViewportUI();
   DrawBrowserUI();
   DrawPropertiesUI();
@@ -172,9 +277,44 @@ void EngineUI::DrawDockSpace() {
   }
 }
 
+void EngineUI::DrawProjectUI() {
+  ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_FirstUseEver);
+  ImGui::Begin("Project", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse);
+  
+  if (ImGui::Button("Save As...")) {
+    std::string path = SaveFileDialog(m_hwnd, "Rose Scene (*.rose)\0*.rose\0");
+    if (!path.empty()) {
+      m_pScene->SaveScene(path);
+    }
+  }
+  
+  ImGui::SameLine();
+  
+  if (ImGui::Button("Open...")) {
+    std::string path = OpenFileDialog(m_hwnd, "Rose Scene (*.rose)\0*.rose\0");
+    if (!path.empty()) {
+      m_pScene->LoadScene(path);
+      m_SelectedObject = nullptr;
+    }
+  }
+  
+  ImGui::End();
+}
+
 void EngineUI::DrawViewportUI() {
+  ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
   ImGui::Begin("Scene Viewport", nullptr, WindowFlags);
-      
+  ImGui::PopStyleVar();
+
+  // ↓ Сохраняем экранные координаты вьюпорта для ImGuizmo::SetRect ↓
+  ImVec2 WindowPosition = ImGui::GetWindowPos();
+  ImVec2 ContentMin     = ImGui::GetWindowContentRegionMin();
+  ImVec2 ContentMax     = ImGui::GetWindowContentRegionMax();
+
+  m_ViewportBoundsMin = { WindowPosition.x + ContentMin.x, WindowPosition.y + ContentMin.y };
+  m_ViewportBoundsMax = { WindowPosition.x + ContentMax.x, WindowPosition.y + ContentMax.y };
+  // ↑ Сохраняем экранные координаты вьюпорта для ImGuizmo::SetRect ↑
+
   ImVec2 ViewportSize = ImGui::GetContentRegionAvail();
 
   UINT ViewportWidth  = static_cast<UINT>(ViewportSize.x);
@@ -188,30 +328,355 @@ void EngineUI::DrawViewportUI() {
       m_SizeChanged = true;
     }
 
-    ImTextureID sceneTextureID = 
-      static_cast<ImTextureID>(
-        m_pRenderer->GetSceneTextureSRV().ptr
-      );
+    ImTextureID sceneTextureID = static_cast<ImTextureID>(
+      m_pRenderer->GetSceneTextureSRV().ptr
+    );
     ImGui::Image(sceneTextureID, ViewportSize);
+
+    // ↓ Raycasting Selection ↓
+    if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left) && !ImGuizmo::IsOver()) {
+      ImVec2 mousePos = ImGui::GetMousePos();
+      float x = (2.0f * (mousePos.x - m_ViewportBoundsMin.x)) / ViewportWidth - 1.0f;
+      float y = 1.0f - (2.0f * (mousePos.y - m_ViewportBoundsMin.y)) / ViewportHeight;
+
+      DirectX::XMMATRIX projMatrix = m_pScene->GetActiveCamera().GetMatrixProjection();
+      DirectX::XMMATRIX viewMatrix = m_pScene->GetActiveCamera().GetTransform().GetMatrixView();
+      DirectX::XMMATRIX viewProjInv = DirectX::XMMatrixInverse(nullptr, viewMatrix * projMatrix);
+
+      DirectX::XMVECTOR rayOrigin = DirectX::XMVector3TransformCoord(DirectX::XMVectorSet(x, y, 0.0f, 1.0f), viewProjInv);
+      DirectX::XMVECTOR rayEnd = DirectX::XMVector3TransformCoord(DirectX::XMVectorSet(x, y, 1.0f, 1.0f), viewProjInv);
+      DirectX::XMVECTOR rayDir = DirectX::XMVector3Normalize(DirectX::XMVectorSubtract(rayEnd, rayOrigin));
+
+      std::shared_ptr<GameObject> closestObj = nullptr;
+      float minWorldHitDist = FLT_MAX;
+
+      for (auto& [name, pObj] : m_pScene->GetGameObjects()) {
+        auto pModel = pObj->GetModel();
+        if (!pModel) continue;
+
+        const auto& vertices = pModel->GetVertices();
+        const auto& indices = pModel->GetIndices();
+        if (vertices.empty() || indices.empty()) continue;
+
+        DirectX::XMMATRIX modelMatrix = pObj->GetTransform().GetMatrixModel();
+        DirectX::XMMATRIX invModelMatrix = DirectX::XMMatrixInverse(nullptr, modelMatrix);
+
+        // Transform camera ray from world space to model's local space
+        DirectX::XMVECTOR localRayOrigin = DirectX::XMVector3TransformCoord(rayOrigin, invModelMatrix);
+        DirectX::XMVECTOR localRayEnd = DirectX::XMVector3TransformCoord(rayEnd, invModelMatrix);
+        DirectX::XMVECTOR localRayDir = DirectX::XMVector3Normalize(DirectX::XMVectorSubtract(localRayEnd, localRayOrigin));
+
+        float closestLocalDist = FLT_MAX;
+        bool hitFound = false;
+
+        size_t indexCount = indices.size();
+        for (size_t i = 0; i < indexCount; i += 3) {
+          if (i + 2 >= indexCount) break;
+
+          UINT idx0 = indices[i];
+          UINT idx1 = indices[i + 1];
+          UINT idx2 = indices[i + 2];
+
+          if (idx0 >= vertices.size() || idx1 >= vertices.size() || idx2 >= vertices.size()) continue;
+
+          DirectX::XMVECTOR V0 = DirectX::XMLoadFloat3(&vertices[idx0].Position);
+          DirectX::XMVECTOR V1 = DirectX::XMLoadFloat3(&vertices[idx1].Position);
+          DirectX::XMVECTOR V2 = DirectX::XMLoadFloat3(&vertices[idx2].Position);
+
+          float t = 0.0f;
+          if (RayTriangleIntersect(localRayOrigin, localRayDir, V0, V1, V2, t)) {
+            if (t < closestLocalDist) {
+              closestLocalDist = t;
+              hitFound = true;
+            }
+          }
+        }
+
+        if (hitFound) {
+          // Compute the world space intersection point and its world space distance to the camera
+          DirectX::XMVECTOR localHitPos = DirectX::XMVectorMultiplyAdd(localRayDir, DirectX::XMVectorReplicate(closestLocalDist), localRayOrigin);
+          DirectX::XMVECTOR worldHitPos = DirectX::XMVector3TransformCoord(localHitPos, modelMatrix);
+          DirectX::XMVECTOR distVec = DirectX::XMVector3Length(DirectX::XMVectorSubtract(worldHitPos, rayOrigin));
+          float worldDistance = DirectX::XMVectorGetX(distVec);
+
+          if (worldDistance < minWorldHitDist) {
+            minWorldHitDist = worldDistance;
+            closestObj = pObj;
+          }
+        }
+      }
+
+      m_SelectedObject = closestObj;
+    }
+    // ↑ Raycasting Selection ↑
+
+    // ↓ Тулбар переключения режима гизмо ↓
+    ImVec2 ToolbarPos = {
+      m_ViewportBoundsMin.x + 10.0f,
+      m_ViewportBoundsMin.y + 10.0f
+    };
+    ImGui::SetNextWindowPos(ToolbarPos, ImGuiCond_Always);
+    ImGui::SetNextWindowBgAlpha(0.65f);
+    ImGui::SetNextWindowSize(ImVec2(0.0f, 0.0f));
+
+    ImGuiWindowFlags ToolbarFlags =
+      ImGuiWindowFlags_NoDecoration      |
+      ImGuiWindowFlags_NoMove            |
+      ImGuiWindowFlags_NoSavedSettings   |
+      ImGuiWindowFlags_NoDocking         |
+      ImGuiWindowFlags_NoNav             |
+      ImGuiWindowFlags_AlwaysAutoResize;
+
+    ImGui::Begin("##GizmoToolbar", nullptr, ToolbarFlags);
+
+    auto DrawToolButton = [&](const char* Label, int GizmoMode) {
+      bool IsActive = (m_GizmoType == GizmoMode);
+      if (IsActive) {
+        ImGui::PushStyleColor(ImGuiCol_Button,        ImVec4(0.3f, 0.5f, 0.9f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.4f, 0.6f, 1.0f, 1.0f));
+      } else {
+        ImGui::PushStyleColor(ImGuiCol_Button,        ImVec4(0.2f, 0.2f, 0.2f, 0.9f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.3f, 0.3f, 1.0f));
+      }
+
+      if (ImGui::Button(Label, ImVec2(34.0f, 28.0f))) {
+        m_GizmoType = (m_GizmoType == GizmoMode) ? -1 : GizmoMode;
+      }
+
+      ImGui::PopStyleColor(2);
+    };
+
+    DrawToolButton("Move",   ImGuizmo::OPERATION::TRANSLATE);
+    ImGui::SameLine(0.0f, 4.0f);
+    DrawToolButton("Rotate", ImGuizmo::OPERATION::ROTATE);
+    ImGui::SameLine(0.0f, 4.0f);
+    DrawToolButton("Scale",  ImGuizmo::OPERATION::SCALE);
+
+    ImGui::End();
+    // ↑ Тулбар переключения режима гизмо ↑
+
+    DrawGizmo();
   }
-  
+
   ImGui::End();
 }
 
 void EngineUI::DrawBrowserUI() {
   ImGui::Begin("Browser", nullptr, WindowFlags);
       
-  if (ImGui::Button("Load")) {
-    // Open file manager
+  if (ImGui::Button("Import", ImVec2(ImGui::GetContentRegionAvail().x, 30))) {
+    std::string FilePath = OpenFileDialog(m_hwnd, "Model files... (*.obj)\0*.obj\0");
+
+    if (!FilePath.empty()) {
+      m_pScene->AddGameObject(FilePath);
+    }
+  }
+  ImGui::Separator();
+
+  if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(0) && !ImGui::IsAnyItemHovered()) {
+    m_SelectedObject = nullptr;
   }
 
+  float Padding = 16.0f;
+  float Thumbnail = 64.0f;
+  float Cell = Thumbnail + Padding;
+  float PanelWidth = ImGui::GetContentRegionAvail().x;
+  int ColumnCount = max(1, static_cast<int>(PanelWidth / Cell));
+
+  ImGui::Columns(ColumnCount, 0, false);
+
+  ImGui::Spacing();
+
+  auto& SceneObjects = m_pScene->GetGameObjects();
+
+  for (auto& [ObjectName, pGameObject] : SceneObjects) {
+    ImGui::PushID(pGameObject.get());
+
+    if (m_SelectedObject == pGameObject) {
+      ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3f, 0.4f, 0.8f, 1.0f));
+    } else {
+      ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+    }
+
+    if (ImGui::ImageButton(pGameObject->GetObjectName().c_str(), (ImTextureID)pGameObject->GetTexture()->GetSrvHandle().ptr, ImVec2(Thumbnail, Thumbnail))) {
+      m_SelectedObject = pGameObject;
+    }
+    ImGui::PopStyleColor();
+
+    ImGui::TextWrapped("%s", pGameObject->GetObjectName().c_str());
+
+    ImGui::NextColumn();
+    ImGui::PopID();
+  }
+
+  ImGui::Columns(1);
   ImGui::End();
 }
 
 void EngineUI::DrawPropertiesUI() {
   ImGui::Begin("Properties", nullptr, WindowFlags);
-      
-  ImGui::Text("Textbox");
-  
+
+  if (m_SelectedObject != nullptr) {
+    char NameBuffer[256];
+    strcpy_s(NameBuffer, m_SelectedObject->GetObjectName().c_str());
+
+    if (ImGui::InputText("Name", NameBuffer, sizeof(NameBuffer))) {
+      m_SelectedObject->GetObjectName() = NameBuffer;
+    }
+
+    ImGui::Separator();
+    ImGui::Text("Transform");
+    ImGui::Spacing();
+
+    auto& rTransform = m_SelectedObject->GetTransform();
+
+    // ↓ Position ↓
+    DirectX::XMFLOAT3 Position = rTransform.GetPosition();
+    float PositionArr[3] = { Position.x, Position.y, Position.z };
+
+    if (ImGui::DragFloat3("Position", PositionArr, 0.05f)) {
+      if (!m_PropertiesEditing) { m_PropertiesInitialTransform = rTransform; m_PropertiesEditing = true; }
+      rTransform.SetPosition(PositionArr[0], PositionArr[1], PositionArr[2]);
+    }
+    // ↑ Position ↑
+
+    // ↓ Rotation (градусы в UI, радианы внутри) ↓
+    DirectX::XMFLOAT3 RotationRad = rTransform.GetRotation();
+    float RotationDeg[3] = {
+      DirectX::XMConvertToDegrees(RotationRad.x),
+      DirectX::XMConvertToDegrees(RotationRad.y),
+      DirectX::XMConvertToDegrees(RotationRad.z)
+    };
+
+    if (ImGui::DragFloat3("Rotation", RotationDeg, 0.5f)) {
+      if (!m_PropertiesEditing) { m_PropertiesInitialTransform = rTransform; m_PropertiesEditing = true; }
+      rTransform.SetRotation(
+        DirectX::XMConvertToRadians(RotationDeg[0]),
+        DirectX::XMConvertToRadians(RotationDeg[1]),
+        DirectX::XMConvertToRadians(RotationDeg[2])
+      );
+    }
+    // ↑ Rotation ↑
+
+    // ↓ Scale ↓
+    DirectX::XMFLOAT3 Scale = rTransform.GetScale();
+    float ScaleArr[3] = { Scale.x, Scale.y, Scale.z };
+
+    if (ImGui::DragFloat3("Scale", ScaleArr, 0.01f, 0.001f, 100.0f)) {
+      if (!m_PropertiesEditing) { m_PropertiesInitialTransform = rTransform; m_PropertiesEditing = true; }
+      rTransform.SetScale(ScaleArr[0], ScaleArr[1], ScaleArr[2]);
+    }
+    // ↑ Scale ↑
+
+    if (m_PropertiesEditing && !ImGui::IsAnyItemActive()) {
+      m_CommandHistory.ExecuteCommand(std::make_unique<TransformCommand>(
+        m_SelectedObject, m_PropertiesInitialTransform, rTransform
+      ));
+      m_PropertiesEditing = false;
+    }
+
+    ImGui::Separator();
+    ImGui::Text("Material");
+
+    if (ImGui::Button("Load Texture", ImVec2(-1, 0))) {
+      std::string FilePath = OpenFileDialog(m_hwnd, "Image Files...\0*.png\0*.jpg\0");
+
+      if (!FilePath.empty()) {
+        m_SelectedObject->LoadTexture(FilePath);
+      }
+    }
+  }
+
+  else {
+    ImGui::Text("Select an object...");
+  }
+
   ImGui::End();
+}
+
+void EngineUI::DrawGizmo() {
+  if (m_SelectedObject == nullptr || m_GizmoType == -1) {
+    m_GizmoActive = false;
+    
+    return;
+  }
+
+  ImGuizmo::SetOrthographic(false);
+  ImGuizmo::SetDrawlist();
+
+  // Передаём экранные координаты вьюпорта, сохранённые в DrawViewportUI
+  float ViewportWidth  = m_ViewportBoundsMax.x - m_ViewportBoundsMin.x;
+  float ViewportHeight = m_ViewportBoundsMax.y - m_ViewportBoundsMin.y;
+  ImGuizmo::SetRect(m_ViewportBoundsMin.x, m_ViewportBoundsMin.y, ViewportWidth, ViewportHeight);
+
+  // ↓ Матрицы камеры ↓
+  // DirectXMath хранит матрицы row-major. ImGuizmo читает float[16] column-major.
+  // Свойство: DX row-major и GLM column-major одних и тех же байт — это математически
+  // транспонированные матрицы, что в точности совпадает с нужным преобразованием.
+  // Дополнительный XMMatrixTranspose не нужен и ломает порядок элементов.
+  DirectX::XMMATRIX ViewMatrix       = m_pScene->GetActiveCamera().GetTransform().GetMatrixView();
+  DirectX::XMMATRIX ProjectionMatrix = m_pScene->GetActiveCamera().GetMatrixProjection();
+  // ↑ Матрицы камеры ↑
+
+  // ↓ Model Matrix ↓
+  auto& rTransform = m_SelectedObject->GetTransform();
+  DirectX::XMMATRIX ModelMatrix = rTransform.GetMatrixModel();
+  // ↑ Model Matrix ↑
+
+  // Загружаем в массивы float[16] без дополнительных преобразований
+  DirectX::XMFLOAT4X4 ViewFloat, ProjectionFloat, ModelFloat;
+  DirectX::XMStoreFloat4x4(&ViewFloat,       ViewMatrix);
+  DirectX::XMStoreFloat4x4(&ProjectionFloat, ProjectionMatrix);
+  DirectX::XMStoreFloat4x4(&ModelFloat,      ModelMatrix);
+
+  ImGuizmo::AllowAxisFlip(false);
+  ImGuizmo::Manipulate(
+    reinterpret_cast<const float*>(&ViewFloat),
+    reinterpret_cast<const float*>(&ProjectionFloat),
+    static_cast<ImGuizmo::OPERATION>(m_GizmoType),
+    ImGuizmo::WORLD,
+    reinterpret_cast<float*>(&ModelFloat)
+  );
+
+  if (ImGuizmo::IsUsing()) {
+    if (!m_GizmoWasUsing) {
+      m_GizmoInitialTransform = rTransform;
+      m_GizmoWasUsing = true;
+    }
+    m_GizmoActive = true;
+
+    // ↓ Читаем результат обратно: XMLoadFloat4x4 уже даёт корректную DX-матрицу ↓
+    // ImGuizmo записал результат в тот же float[16] — байты совместимы напрямую.
+    DirectX::XMMATRIX ResultMatrix = DirectX::XMLoadFloat4x4(&ModelFloat);
+    // ↑ Читаем результат обратно ↑
+
+    // Декомпозируем матрицу на составляющие
+    DirectX::XMVECTOR ScaleVector, RotationQuaternion, TranslationVector;
+    DirectX::XMMatrixDecompose(&ScaleVector, &RotationQuaternion, &TranslationVector, ResultMatrix);
+
+    DirectX::XMFLOAT3 NewPosition, NewScale;
+    DirectX::XMStoreFloat3(&NewPosition, TranslationVector);
+    DirectX::XMStoreFloat3(&NewScale,    ScaleVector);
+
+    // Кватернион → матрица вращения → углы Эйлера (Pitch, Yaw, Roll)
+    DirectX::XMMATRIX RotationMatrix = DirectX::XMMatrixRotationQuaternion(RotationQuaternion);
+    DirectX::XMFLOAT4X4 RotFloat;
+    DirectX::XMStoreFloat4x4(&RotFloat, RotationMatrix);
+
+    float Pitch = asinf(-RotFloat._32);
+    float Yaw   = atan2f(RotFloat._31, RotFloat._33);
+    float Roll  = atan2f(RotFloat._12, RotFloat._22);
+
+    rTransform.SetPosition(NewPosition.x, NewPosition.y, NewPosition.z);
+    rTransform.SetRotation(Pitch, Yaw, Roll);
+    rTransform.SetScale(NewScale.x, NewScale.y, NewScale.z);
+  } else {
+    if (m_GizmoWasUsing) {
+      m_CommandHistory.ExecuteCommand(std::make_unique<TransformCommand>(
+        m_SelectedObject, m_GizmoInitialTransform, rTransform
+      ));
+      m_GizmoWasUsing = false;
+    }
+    m_GizmoActive = false;
+  }
 }

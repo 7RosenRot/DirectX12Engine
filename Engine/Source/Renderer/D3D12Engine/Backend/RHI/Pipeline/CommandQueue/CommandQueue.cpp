@@ -4,7 +4,10 @@
 #include <Renderer/D3D12Engine/Backend/RHI/Pipeline/CommandQueue/CommandQueue.hpp>
 
 D3D12Engine::CommandQueue::CommandQueue(
-  ID3D12Device* pDevice, D3D12_COMMAND_LIST_TYPE cmdListType) : m_fenceValue(1) 
+  ID3D12Device* pDevice,
+  D3D12_COMMAND_LIST_TYPE cmdListType
+) :
+  m_fenceValue(1) 
 {
   D3D12_COMMAND_QUEUE_DESC cmdQueueDescriptor{};
   cmdQueueDescriptor.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;

@@ -28,6 +28,8 @@ class Input {
   
   // ↓ Mouse ↓
   static bool  m_MouseLocker;
+  static bool  m_IgnoreNextMouseMove;
+  
   static float m_MouseDeltaX;
   static float m_MouseDeltaY;
   // ↑ Mouse ↑

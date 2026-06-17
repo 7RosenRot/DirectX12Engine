@@ -11,12 +11,11 @@
 #include <Framework/Camera/Camera.hpp>
 #include <Framework/GameObject/GameObject.hpp>
 
-
-
 #include <Renderer/D3D12Engine/Model/Model.hpp>
 
 #include <Renderer/D3D12Engine/Backend/RHI/Core/CommandContext/CommandContext.hpp>
 #include <Renderer/D3D12Engine/Backend/RHI/Core/DescriptorAllocator/DescriptorAllocator.hpp>
+#include <Renderer/D3D12Engine/Backend/RHI/Core/CommandContextPool/CommandContextPool.hpp>
 #include <Renderer/D3D12Engine/Backend/RHI/Pipeline/SwapChain/SwapChain.hpp>
 #include <Renderer/D3D12Engine/Backend/RHI/Pipeline/CommandQueue/CommandQueue.hpp>
 #include <Renderer/D3D12Engine/Backend/RHI/Pipeline/PipelineState/PipelineState.hpp>
@@ -50,7 +49,8 @@ namespace D3D12Engine {
       void DrawFrame(
         D3D12Engine::Model& rModel,
         D3D12Engine::Texture& rTexture,
-        const DirectX::XMMATRIX& rViewProjectionMatrix
+        const DirectX::XMMATRIX& rViewProjectionMatrix,
+        bool isSelected
       );
 
       void EndFrame();
@@ -59,12 +59,33 @@ namespace D3D12Engine {
     void PrepareUIContext();
 
     // ↓ Get Resource ↓
-      ID3D12Device* GetDevice() const { return m_device.Get(); }
-      CommandQueue* GetCommandQueue() const { return m_cmdQueue.get(); }
-      ID3D12CommandQueue* GetCommandQueueResource() const { return m_cmdQueue->GetResource(); }
-      CommandContext* GetCommandContext() const { return m_cmdContext.get(); }
-      DescriptorAllocator* GetSrvAllocator() const { return m_SrvAllocator.get(); }
-      ID3D12GraphicsCommandList* GetCommandList() const { return m_cmdContext->GetCommandList(); }
+      ID3D12Device* GetDevice() const {
+        return m_device.Get();
+      }
+      
+      CommandQueue* GetCommandQueue() const {
+        return m_cmdQueue.get();
+      }
+      
+      ID3D12CommandQueue* GetCommandQueueResource() const {
+        return m_cmdQueue->GetResource();
+      }
+      
+      CommandContext* GetCommandContext() const {
+        return m_pFrameContext;
+      }
+
+      CommandContextPool* GetContextPool() const {
+        return m_cmdContextPool.get();
+      }
+      
+      ID3D12GraphicsCommandList* GetCommandList() const {
+        return m_pFrameContext ? m_pFrameContext->GetCommandList() : nullptr;
+      }
+      
+      DescriptorAllocator* GetSrvAllocator() const {
+        return m_SrvAllocator.get(); 
+      }
     // ↑ Get Resource ↑
   
    private:
@@ -95,13 +116,16 @@ namespace D3D12Engine {
       Microsoft::WRL::ComPtr<IDXGIFactory4> factory4;
 
       std::unique_ptr<CommandQueue> m_cmdQueue;
-      std::unique_ptr<CommandContext> m_cmdContext;
       std::unique_ptr<SwapChain> m_SwapChain;
+      
+      std::unique_ptr<CommandContextPool> m_cmdContextPool;
+      CommandContext* m_pFrameContext = nullptr;
 
       DepthBuffer m_DepthBuffer;
 
       RootSignature m_rootSignature;
       GraphicsPSO m_pipelineState{L"Main PipelineStateObject"};
+      GraphicsPSO m_outlinePipelineState{L"Outline PipelineStateObject"};
     // ↑ Pipeline modules ↑
 
     void GetHardwareAdapter(

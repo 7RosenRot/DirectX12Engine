@@ -13,6 +13,10 @@ void Camera::SetLensProperties(
 }
 
 void Camera::InputProcessing(const float MovementSpeed, const float MouseSensivity) {
+  if (!Input::IsMouseLocked()) {
+    return;
+  }
+
   const float speed = 1.0F * MovementSpeed;
 
   if (Input::IsKeyDown('W')) { m_Transform.Forward( speed ); }

@@ -24,16 +24,14 @@ class Camera {
   // ↑ Input processing ↑
 
   // ↓ Getters ↓
-  Transform& GetTransform() {
-    return m_Transform;
-  }
-  
-  XMMATRIX GetMatrixProjection() const {
-    return m_MatrixProjection;
-  }
+  Transform& GetTransform() { return m_Transform; }
+
+  XMMATRIX GetMatrixProjection() const { return m_MatrixProjection; }
+  XMMATRIX GetMatrixView()       const { return m_MatrixView; }
   // ↑ Getters ↑
  private:
   Transform m_Transform;
 
   XMMATRIX m_MatrixProjection = XMMatrixIdentity();
+  XMMATRIX m_MatrixView = m_Transform.GetMatrixView();
 };

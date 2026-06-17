@@ -8,8 +8,7 @@
 namespace D3D12Engine {
   class DepthBuffer : public GpuResource {
    public:
-    DepthBuffer(float clearDepth = 1.0F, UINT8 clearStencil = 0)
-    : m_Format(DXGI_FORMAT_UNKNOWN), m_ClearDepth(clearDepth), m_ClearStencil(clearStencil) {}
+    DepthBuffer(float clearDepth = 1.0F, UINT8 clearStencil = 0);
     
     ~DepthBuffer() = default;
 

@@ -16,6 +16,14 @@ class Transform {
   void SetPosition(float Ox, float Oy, float Oz) {
     m_Position = { Ox, Oy, Oz };
   }
+
+  void SetRotation(float Pitch, float Yaw, float Roll) {
+    m_Rotation = { Pitch, Yaw, Roll };
+  }
+
+  void SetScale(float Sx, float Sy, float Sz) {
+    m_Scale = { Sx, Sy, Sz };
+  }
   // ↑ Setters ↑
 
   // ↓ Movement, Rotating ↓
@@ -33,10 +41,21 @@ class Transform {
   XMFLOAT3 GetPosition() const {
     return m_Position;
   }
+
+  XMFLOAT3 GetRotation() const {
+    return m_Rotation;
+  }
+
+  XMFLOAT3 GetScale() const {
+    return m_Scale;
+  }
   // ↑ Getters ↑
  private:
   // ↓ Lens Properties ↓
   XMFLOAT3 m_Position{0.0F, 0.0F, 0.0F};
+  XMFLOAT3 m_Rotation{0.0F, 0.0F, 0.0F};  // Pitch, Yaw, Roll (radians)
+  XMFLOAT3 m_Scale{1.0F, 1.0F, 1.0F};
+
   XMFLOAT3 m_Look{0.0F, 0.0F, 1.0F};
   
   XMFLOAT3 m_Right{1.0F, 0.0F, 0.0F};
