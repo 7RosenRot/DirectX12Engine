@@ -62,28 +62,36 @@ static bool RayTriangleIntersect(
   DirectX::XMVECTOR h = DirectX::XMVector3Cross(rayDir, edge2);
   DirectX::XMVECTOR aVec = DirectX::XMVector3Dot(edge1, h);
   float a = DirectX::XMVectorGetX(aVec);
+  
   if (a > -EPSILON && a < EPSILON) {
-    return false; // Ray is parallel to triangle.
+    return false;
   }
+  
   float f = 1.0f / a;
   DirectX::XMVECTOR s = DirectX::XMVectorSubtract(rayOrigin, V0);
   DirectX::XMVECTOR uVec = DirectX::XMVectorMultiply(DirectX::XMVector3Dot(s, h), DirectX::XMVectorReplicate(f));
   float u = DirectX::XMVectorGetX(uVec);
+  
   if (u < 0.0f || u > 1.0f) {
     return false;
   }
+  
   DirectX::XMVECTOR q = DirectX::XMVector3Cross(s, edge1);
   DirectX::XMVECTOR vVec = DirectX::XMVectorMultiply(DirectX::XMVector3Dot(rayDir, q), DirectX::XMVectorReplicate(f));
   float v = DirectX::XMVectorGetX(vVec);
+  
   if (v < 0.0f || u + v > 1.0f) {
     return false;
   }
+  
   DirectX::XMVECTOR tVec = DirectX::XMVectorMultiply(DirectX::XMVector3Dot(edge2, q), DirectX::XMVectorReplicate(f));
   float t = DirectX::XMVectorGetX(tVec);
+  
   if (t > EPSILON) {
     outIntersectionDistance = t;
     return true;
   }
+  
   return false;
 }
 
@@ -104,8 +112,14 @@ ImGuiDockNodeFlags dockFlags = {
   ImGuiDockNodeFlags_NoTabBar
 };
 
-EngineUI::EngineUI(HWND hwnd, D3D12Engine::DirectX12Graphics* pRenderer, Scene* pScene)
- : m_hwnd(hwnd), m_pRenderer(pRenderer), m_pScene(pScene)
+EngineUI::EngineUI(
+  HWND hwnd,
+  D3D12Engine::DirectX12Graphics* pRenderer,
+  Scene* pScene
+) : 
+  m_hwnd(hwnd),
+  m_pRenderer(pRenderer),
+  m_pScene(pScene)
 {
   IMGUI_CHECKVERSION();
 
@@ -114,7 +128,7 @@ EngineUI::EngineUI(HWND hwnd, D3D12Engine::DirectX12Graphics* pRenderer, Scene* 
   ImGuiIO& io = ImGui::GetIO();
   io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
-  // ↓ Style Config ↓
+#pragma region ImGui StyleConfig
   ImGuiStyle& Style = ImGui::GetStyle();
   Style.WindowRounding    = 8.0f;
   Style.PopupRounding     = 6.0f;
@@ -153,7 +167,7 @@ EngineUI::EngineUI(HWND hwnd, D3D12Engine::DirectX12Graphics* pRenderer, Scene* 
   Colors[ImGuiCol_Button]             = ImVec4(0.20f, 0.20f, 0.20f, 1.00f);
   Colors[ImGuiCol_ButtonHovered]      = ImVec4(0.28f, 0.28f, 0.28f, 1.00f);
   Colors[ImGuiCol_ButtonActive]       = ImVec4(0.35f, 0.35f, 0.35f, 1.00f);
-  // ↑ Style Config ↑
+#pragma endregion
 }
 
 EngineUI::~EngineUI() {
@@ -165,7 +179,8 @@ void EngineUI::Initialize(
   ID3D12CommandQueue* pCommandQueue,
   UINT FramesInFlight,
   DXGI_FORMAT RtvFormat,
-  D3D12Engine::DescriptorAllocator& rSrvAllocator
+  D3D12Engine::DescriptorAllocator& rSrvAllocator,
+  AssetManager* pAssetManager
 ) {
   ImGui_ImplWin32_Init(m_hwnd);
 
@@ -180,6 +195,16 @@ void EngineUI::Initialize(
     InitInfo.LegacySingleSrvCpuDescriptor = m_FontAllocation.CPU;
     InitInfo.LegacySingleSrvGpuDescriptor = m_FontAllocation.GPU;
   ImGui_ImplDX12_Init(&InitInfo);
+
+  // ↓ Preroload Images ↓
+  if (pAssetManager) {
+    m_pIconMove   = pAssetManager->LoadTexture("Engine/Assets/Images/Move.png");
+    m_pIconRotate = pAssetManager->LoadTexture("Engine/Assets/Images/Rotate.png");
+    m_pIconScale  = pAssetManager->LoadTexture("Engine/Assets/Images/Scale.png");
+    
+    pAssetManager->ExexuteUploads();
+  }
+  // ↑ Preroload Images ↑
 }
 
 void EngineUI::Shutdown() {
@@ -193,15 +218,11 @@ void EngineUI::BeginUI() {
   ImGui_ImplWin32_NewFrame();
   ImGui::NewFrame();
 
-  // ↓ Скрываем курсор от ImGui в режиме управления камерой ↓
-  // Пока мышь захвачена (ПКМ зажат), курсор физически находится в центре экрана,
-  // что может ложно активировать hover/click на виджетах (гизмо, кнопки тулбара).
-  // Установка (-FLT_MAX, -FLT_MAX) — официальный способ сообщить ImGui
-  // что курсор недоступен, без отключения всей системы ввода.
+  // ↓ If "Free Camera" - hide Cursor ↓
   if (Input::IsMouseLocked()) {
     ImGui::GetIO().MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
   }
-  // ↑ Скрываем курсор от ImGui в режиме управления камерой ↑
+  // ↑ If "Free Camera" - hide Cursor ↑
 
   ImGuizmo::BeginFrame();
 }
@@ -268,8 +289,8 @@ void EngineUI::DrawDockSpace() {
       ImGuiID dockRightID = ImGui::DockBuilderSplitNode(dockMainID, ImGuiDir_Right, 0.3F, nullptr, &dockMainID);
       ImGuiID dockBottomID = ImGui::DockBuilderSplitNode(dockMainID, ImGuiDir_Down, 0.3F, nullptr, &dockMainID);
 
-      ImGui::DockBuilderDockWindow("Browser", dockBottomID);
-      ImGui::DockBuilderDockWindow("Properties", dockRightID);
+      ImGui::DockBuilderDockWindow("Browser",        dockBottomID);
+      ImGui::DockBuilderDockWindow("Properties",     dockRightID);
       ImGui::DockBuilderDockWindow("Scene Viewport", dockMainID);
 
       ImGui::DockBuilderFinish(dockSpaceID);
@@ -278,27 +299,50 @@ void EngineUI::DrawDockSpace() {
 }
 
 void EngineUI::DrawProjectUI() {
-  ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_FirstUseEver);
-  ImGui::Begin("Project", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse);
-  
-  if (ImGui::Button("Save As...")) {
-    std::string path = SaveFileDialog(m_hwnd, "Rose Scene (*.rose)\0*.rose\0");
-    if (!path.empty()) {
-      m_pScene->SaveScene(path);
+  ImGui::PushStyleVar(ImGuiStyleVar_PopupRounding, 2.5f);
+  ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 2.5f);
+
+  if (ImGui::BeginMainMenuBar()) {
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 2.5f);
+    
+    if (ImGui::Button("Scene")) {
+      ImGui::OpenPopup("SceneMenuPopup");
     }
+
+    ImVec2 PopupPosition = ImVec2(ImGui::GetItemRectMin().x, ImGui::GetItemRectMax().y);
+
+    ImGui::PopStyleVar();
+    ImGui::PopStyleColor();
+
+    ImGui::SetNextWindowPos(PopupPosition);
+
+    if (ImGui::BeginPopup("SceneMenuPopup")) {
+
+      if (ImGui::Button("Save As...")) {
+        std::string FilePath = SaveFileDialog(m_hwnd, "Rose Scene (*.rose)\0*.rose\0");
+        
+        if (!FilePath.empty()) {
+          m_pScene->SaveScene(FilePath);
+        }
+      }
+      
+      if (ImGui::Button("Open...")) {
+        std::string FilePath = OpenFileDialog(m_hwnd, "Rose Scene (*.rose)\0*.rose\0");
+        
+        if (!FilePath.empty()) {
+          m_pScene->LoadScene(FilePath);
+          m_SelectedObject = nullptr;
+        }
+      }
+      
+      ImGui::EndPopup();
+    }
+
+    ImGui::EndMainMenuBar();
   }
   
-  ImGui::SameLine();
-  
-  if (ImGui::Button("Open...")) {
-    std::string path = OpenFileDialog(m_hwnd, "Rose Scene (*.rose)\0*.rose\0");
-    if (!path.empty()) {
-      m_pScene->LoadScene(path);
-      m_SelectedObject = nullptr;
-    }
-  }
-  
-  ImGui::End();
+  ImGui::PopStyleVar(2);
 }
 
 void EngineUI::DrawViewportUI() {
@@ -306,14 +350,14 @@ void EngineUI::DrawViewportUI() {
   ImGui::Begin("Scene Viewport", nullptr, WindowFlags);
   ImGui::PopStyleVar();
 
-  // ↓ Сохраняем экранные координаты вьюпорта для ImGuizmo::SetRect ↓
+  // ↓ Save Viewport Coordinates for ImGuizmo::SetRect ↓
   ImVec2 WindowPosition = ImGui::GetWindowPos();
   ImVec2 ContentMin     = ImGui::GetWindowContentRegionMin();
   ImVec2 ContentMax     = ImGui::GetWindowContentRegionMax();
 
   m_ViewportBoundsMin = { WindowPosition.x + ContentMin.x, WindowPosition.y + ContentMin.y };
   m_ViewportBoundsMax = { WindowPosition.x + ContentMax.x, WindowPosition.y + ContentMax.y };
-  // ↑ Сохраняем экранные координаты вьюпорта для ImGuizmo::SetRect ↑
+  // ↑ Save Viewport Coordinates for ImGuizmo::SetRect ↑
 
   ImVec2 ViewportSize = ImGui::GetContentRegionAvail();
 
@@ -361,7 +405,6 @@ void EngineUI::DrawViewportUI() {
         DirectX::XMMATRIX modelMatrix = pObj->GetTransform().GetMatrixModel();
         DirectX::XMMATRIX invModelMatrix = DirectX::XMMatrixInverse(nullptr, modelMatrix);
 
-        // Transform camera ray from world space to model's local space
         DirectX::XMVECTOR localRayOrigin = DirectX::XMVector3TransformCoord(rayOrigin, invModelMatrix);
         DirectX::XMVECTOR localRayEnd = DirectX::XMVector3TransformCoord(rayEnd, invModelMatrix);
         DirectX::XMVECTOR localRayDir = DirectX::XMVector3Normalize(DirectX::XMVectorSubtract(localRayEnd, localRayOrigin));
@@ -393,7 +436,6 @@ void EngineUI::DrawViewportUI() {
         }
 
         if (hitFound) {
-          // Compute the world space intersection point and its world space distance to the camera
           DirectX::XMVECTOR localHitPos = DirectX::XMVectorMultiplyAdd(localRayDir, DirectX::XMVectorReplicate(closestLocalDist), localRayOrigin);
           DirectX::XMVECTOR worldHitPos = DirectX::XMVector3TransformCoord(localHitPos, modelMatrix);
           DirectX::XMVECTOR distVec = DirectX::XMVector3Length(DirectX::XMVectorSubtract(worldHitPos, rayOrigin));
@@ -410,14 +452,17 @@ void EngineUI::DrawViewportUI() {
     }
     // ↑ Raycasting Selection ↑
 
-    // ↓ Тулбар переключения режима гизмо ↓
+    // ↓ ImGuizmo Toolbar (Move / Rotate / Scale) ↓
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,   ImVec2(0, 0));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize,     0.0f );
+    
     ImVec2 ToolbarPos = {
-      m_ViewportBoundsMin.x + 10.0f,
+      m_ViewportBoundsMin.x + 5.0f,
       m_ViewportBoundsMin.y + 10.0f
     };
     ImGui::SetNextWindowPos(ToolbarPos, ImGuiCond_Always);
-    ImGui::SetNextWindowBgAlpha(0.65f);
-    ImGui::SetNextWindowSize(ImVec2(0.0f, 0.0f));
+    ImGui::SetNextWindowBgAlpha(0.0f);
 
     ImGuiWindowFlags ToolbarFlags =
       ImGuiWindowFlags_NoDecoration      |
@@ -429,31 +474,71 @@ void EngineUI::DrawViewportUI() {
 
     ImGui::Begin("##GizmoToolbar", nullptr, ToolbarFlags);
 
-    auto DrawToolButton = [&](const char* Label, int GizmoMode) {
-      bool IsActive = (m_GizmoType == GizmoMode);
-      if (IsActive) {
-        ImGui::PushStyleColor(ImGuiCol_Button,        ImVec4(0.3f, 0.5f, 0.9f, 1.0f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.4f, 0.6f, 1.0f, 1.0f));
-      } else {
-        ImGui::PushStyleColor(ImGuiCol_Button,        ImVec4(0.2f, 0.2f, 0.2f, 0.9f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.3f, 0.3f, 1.0f));
-      }
+    auto DrawToolButton = [&](
+      const char* ID,
+      ImTextureID TextureIcon,
+      int         GizmoMode,
+      int         PositionType
+    ) {
+      ImVec2 BtnSize = ImVec2(40.0f, 40.0f);
 
-      if (ImGui::Button(Label, ImVec2(34.0f, 28.0f))) {
+      ImVec2 Point_TopLeft     = ImGui::GetCursorScreenPos();
+      ImVec2 Point_BottomRight = ImVec2(Point_TopLeft.x + BtnSize.x, Point_TopLeft.y + BtnSize.y);
+      ImDrawList* pDrawList    = ImGui::GetWindowDrawList();
+
+      ImGui::InvisibleButton(ID, BtnSize);
+
+      bool IsHovered  = ImGui::IsItemHovered();
+      bool IsSelected = (m_GizmoType == GizmoMode);
+
+      if (ImGui::IsItemClicked()) {
         m_GizmoType = (m_GizmoType == GizmoMode) ? -1 : GizmoMode;
       }
 
-      ImGui::PopStyleColor(2);
+      ImU32 bgColor;
+      if (IsSelected)     { bgColor = IM_COL32(76, 127, 230, 200); }
+      else if (IsHovered) { bgColor = IM_COL32(100, 150, 255, 100); }
+      else                { bgColor = IM_COL32(40, 40, 40, 180); }
+
+      ImDrawFlags Corners = ImDrawFlags_RoundCornersNone;
+      float Rounding = 0.0f;
+
+      if (PositionType == 0) {
+        Corners = ImDrawFlags_RoundCornersTop;
+        Rounding = 5.0f;
+      } else if (PositionType == 2) {
+        Corners = ImDrawFlags_RoundCornersBottom;
+        Rounding = 5.0f;
+      }
+
+      pDrawList->AddRectFilled(Point_TopLeft, Point_BottomRight, bgColor, Rounding, Corners);
+
+      float IconPadding = 5.0f;
+      ImVec2 Image_TopLeft     = ImVec2(Point_TopLeft.x + IconPadding, Point_TopLeft.y + IconPadding);
+      ImVec2 Image_BottomRight = ImVec2(Point_BottomRight.x - IconPadding, Point_BottomRight.y - IconPadding);
+
+      pDrawList->AddImage(TextureIcon, Image_TopLeft, Image_BottomRight);
     };
 
-    DrawToolButton("Move",   ImGuizmo::OPERATION::TRANSLATE);
-    ImGui::SameLine(0.0f, 4.0f);
-    DrawToolButton("Rotate", ImGuizmo::OPERATION::ROTATE);
-    ImGui::SameLine(0.0f, 4.0f);
-    DrawToolButton("Scale",  ImGuizmo::OPERATION::SCALE);
+    ImTextureID IconMove_Texture = static_cast<ImTextureID>(m_pIconMove->GetSrvHandle().ptr);
+    DrawToolButton("##MoveBtn", IconMove_Texture, ImGuizmo::OPERATION::TRANSLATE, 0);
+    
+    ImTextureID IconRotate_Texture = static_cast<ImTextureID>(m_pIconRotate->GetSrvHandle().ptr);
+    DrawToolButton("##RotateBtn", IconRotate_Texture, ImGuizmo::OPERATION::ROTATE, 1);
+    
+    ImTextureID IconScale_Texture = static_cast<ImTextureID>(m_pIconScale->GetSrvHandle().ptr);
+    DrawToolButton("##ScaleBtn", IconScale_Texture,  ImGuizmo::OPERATION::SCALE, 2);
+
+    if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+      if (!ImGuizmo::IsOver() && !ImGui::IsAnyItemHovered()) {
+        m_GizmoType = -1;
+      }
+    }
 
     ImGui::End();
-    // ↑ Тулбар переключения режима гизмо ↑
+
+    ImGui::PopStyleVar(3);
+    // ↑ ImGuizmo Toolbar (Move / Rotate / Scale) ↑
 
     DrawGizmo();
   }
@@ -463,25 +548,36 @@ void EngineUI::DrawViewportUI() {
 
 void EngineUI::DrawBrowserUI() {
   ImGui::Begin("Browser", nullptr, WindowFlags);
-      
-  if (ImGui::Button("Import", ImVec2(ImGui::GetContentRegionAvail().x, 30))) {
+
+  ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 8.0f);
+
+  if (
+    ImGui::Button("Import", ImVec2(60.0f, 25.0f))
+  ) {
     std::string FilePath = OpenFileDialog(m_hwnd, "Model files... (*.obj)\0*.obj\0");
 
     if (!FilePath.empty()) {
       m_pScene->AddGameObject(FilePath);
     }
   }
-  ImGui::Separator();
 
-  if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(0) && !ImGui::IsAnyItemHovered()) {
+  ImGui::PopStyleVar();
+
+  if (
+    ImGui::IsWindowHovered() &&
+    ImGui::IsMouseClicked(0) &&
+    !ImGui::IsAnyItemHovered()
+  ) {
     m_SelectedObject = nullptr;
   }
 
+  // ↓ Object Icon ↓
   float Padding = 16.0f;
   float Thumbnail = 64.0f;
   float Cell = Thumbnail + Padding;
   float PanelWidth = ImGui::GetContentRegionAvail().x;
   int ColumnCount = max(1, static_cast<int>(PanelWidth / Cell));
+  // ↑ Object Icon ↑
 
   ImGui::Columns(ColumnCount, 0, false);
 
@@ -493,14 +589,27 @@ void EngineUI::DrawBrowserUI() {
     ImGui::PushID(pGameObject.get());
 
     if (m_SelectedObject == pGameObject) {
-      ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3f, 0.4f, 0.8f, 1.0f));
+      ImGui::PushStyleColor(
+        ImGuiCol_Button,
+        ImVec4(0.3f, 0.4f, 0.8f, 1.0f)
+      );
     } else {
-      ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+      ImGui::PushStyleColor(
+        ImGuiCol_Button,
+        ImVec4(0.0f, 0.0f, 0.0f, 0.0f)
+      );
     }
 
-    if (ImGui::ImageButton(pGameObject->GetObjectName().c_str(), (ImTextureID)pGameObject->GetTexture()->GetSrvHandle().ptr, ImVec2(Thumbnail, Thumbnail))) {
+    if (
+      ImGui::ImageButton(
+        pGameObject->GetObjectName().c_str(),
+        (ImTextureID)pGameObject->GetTexture()->GetSrvHandle().ptr,
+        ImVec2(Thumbnail, Thumbnail)
+      )
+    ) {
       m_SelectedObject = pGameObject;
     }
+    
     ImGui::PopStyleColor();
 
     ImGui::TextWrapped("%s", pGameObject->GetObjectName().c_str());

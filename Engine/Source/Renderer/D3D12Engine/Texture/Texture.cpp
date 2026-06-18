@@ -8,7 +8,7 @@ bool D3D12Engine::Texture::LoadTexture(
   DescriptorAllocator& rSrvAllocator
 ) {
   if (FilePath.empty()) {
-    UINT32 purplePixel = 0xFFFF00FF; // ABGR format
+    UINT32 purplePixel = 0xFFFF00FF;
     LoadFromMemory(&purplePixel, 1, 1, pDevice, rUploadContext, rSrvAllocator);
     return false;
   }
@@ -22,7 +22,7 @@ bool D3D12Engine::Texture::LoadTexture(
   if (pImageData == nullptr) {
     OutputDebugStringA(("File not found: " + FilePath + "\n").c_str());
     
-    UINT32 purplePixel = 0xFFFF00FF; // ABGR format
+    UINT32 purplePixel = 0xFFFF00FF;
     LoadFromMemory(&purplePixel, 1, 1, pDevice, rUploadContext, rSrvAllocator);
     return false;
   }

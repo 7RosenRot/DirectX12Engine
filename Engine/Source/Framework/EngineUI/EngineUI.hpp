@@ -21,7 +21,11 @@ class AssetManager;
 
 class EngineUI {
  public:
-  EngineUI(HWND hwnd, D3D12Engine::DirectX12Graphics* pRenderer, Scene* pScene);
+  EngineUI(
+    HWND hwnd,
+    D3D12Engine::DirectX12Graphics* pRenderer,
+    Scene* pScene
+  );
   ~EngineUI();
 
   void Initialize(
@@ -29,7 +33,8 @@ class EngineUI {
     ID3D12CommandQueue* pCommandQueue,
     UINT FramesInFlight,
     DXGI_FORMAT RtvFormat,
-    D3D12Engine::DescriptorAllocator& rSrvAllocator
+    D3D12Engine::DescriptorAllocator& rSrvAllocator,
+    AssetManager* pAssetManager
   );
   void Shutdown();
 
@@ -53,9 +58,10 @@ class EngineUI {
 
  private:
   HWND m_hwnd;
-  std::shared_ptr<GameObject> m_SelectedObject = nullptr;
-  D3D12Engine::DirectX12Graphics* m_pRenderer;
-  Scene* m_pScene;
+  std::shared_ptr<GameObject>     m_SelectedObject = nullptr;
+  D3D12Engine::DirectX12Graphics* m_pRenderer = nullptr;
+  Scene*                          m_pScene = nullptr;
+  AssetManager*                   m_pAssetManager = nullptr;
   
   UINT m_ViewportWidth  = 1;
   UINT m_ViewportHeight = 1;
@@ -68,6 +74,7 @@ class EngineUI {
   bool   m_GizmoActive       = false;
   ImVec2 m_ViewportBoundsMin = { 0.0f, 0.0f };
   ImVec2 m_ViewportBoundsMax = { 0.0f, 0.0f };
+  // ↑ Gizmo State ↑
 
   // ↓ Undo/Redo State ↓
   CommandHistory m_CommandHistory;
@@ -77,7 +84,10 @@ class EngineUI {
   Transform m_PropertiesInitialTransform;
   bool m_PropertiesEditing = false;
   // ↑ Undo/Redo State ↑
-  // ↑ Gizmo State ↑
+
+  std::shared_ptr<D3D12Engine::Texture> m_pIconMove   = nullptr;
+  std::shared_ptr<D3D12Engine::Texture> m_pIconRotate = nullptr;
+  std::shared_ptr<D3D12Engine::Texture> m_pIconScale  = nullptr;
 
   void DrawDockSpace();
   void DrawProjectUI();

@@ -47,7 +47,8 @@ void Kernel::AppInitialize(
     m_pRenderer->GetCommandQueueResource(),
     D3D12Engine::GraphicsCore::FrameCount,
     DXGI_FORMAT_R8G8B8A8_UNORM,
-    *(m_pRenderer->GetSrvAllocator())
+    *(m_pRenderer->GetSrvAllocator()),
+    m_pAssetManager.get()
   );
 
   m_AppRunning = true;
