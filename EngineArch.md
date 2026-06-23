@@ -1,5 +1,4 @@
 ## Engine Tree
----
 
 Engine/
 - Assets/           ← Ассеты
@@ -57,9 +56,7 @@ Engine/
 
 CMakeLists.txt
 
----
 ## Annotation
----
 
 
 ### Application layer
@@ -76,7 +73,6 @@ CMakeLists.txt
 3. *Подчиняется*
   - Запускается непосредственно Windows ОС.
 
----
 #### Window class
 ---
 1. *Назначение*
