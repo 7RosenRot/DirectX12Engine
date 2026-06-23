@@ -1,7 +1,7 @@
 ## Engine Tree
 
 Engine/
-- Assets/&emsp;&emsp;← Ассеты
+- Assets/&emsp;&emsp;&emsp;&emsp;&emsp;← Ассеты
   - Config/
   - Models/
   - Fonts/
@@ -9,7 +9,7 @@ Engine/
   - Projects/
   - Shaders/
 
-- Source/&emsp;&emsp;← Код
+- Source/&emsp;&emsp;&emsp;&emsp;&emsp;← Код
   - Application/            ← Слой 4
     - Window/
     - Input/
