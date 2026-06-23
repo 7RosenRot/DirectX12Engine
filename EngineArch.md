@@ -9,13 +9,13 @@ Engine/
   - Projects/
   - Shaders/
 
-- Source/           ← _*Код*_
-  - Application/            ← *Слой 4*
+- Source/           ← __*Код*__
+  - Application/            ← __*Слой 4*__
     - Window/
     - Input/
     - Kernel/
 
-  - Framework/              ← *Слой 3*
+  - Framework/              ← __*Слой 3*__
     - AssetManager/
     - Camera/
     - EngineUI/
@@ -25,13 +25,13 @@ Engine/
     - Scene/
     - Transform/
 
-  - Renderer/               ← *Слой 2*
+  - Renderer/               ← __*Слой 2*__
     - D3D12Engine/
       - Model/
       - Texture/
       - Backend/
         - DirectX12Graphics/
-        - RHI/              ← *Слой 1*
+        - RHI/              ← __*Слой 1*__
           - Core/
             - CommandContext/
             - CommandContextPool/
