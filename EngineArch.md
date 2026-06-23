@@ -10,12 +10,12 @@ Engine/
   - Shaders/
 
 - Source/&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;← Код
-  - Application/&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;← Слой 4
+  - Application/&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;← Слой 4
     - Window/
     - Input/
     - Kernel/
 
-  - Framework/&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;← Слой 3
+  - Framework/&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;← Слой 3
     - AssetManager/
     - Camera/
     - EngineUI/
@@ -25,13 +25,13 @@ Engine/
     - Scene/
     - Transform/
 
-  - Renderer/&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;← Слой 2
+  - Renderer/&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;← Слой 2
     - D3D12Engine/
       - Model/
       - Texture/
       - Backend/
         - DirectX12Graphics/
-        - RHI/&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;← Слой 1
+        - RHI/&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;← Слой 1
           - Core/
             - CommandContext/
             - CommandContextPool/
