@@ -1,7 +1,7 @@
 ## Engine Tree
 
 Engine/
-- Assets/&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;← Ассеты
+- Assets/           ← Ассеты
   - Config/
   - Models/
   - Fonts/
@@ -9,13 +9,13 @@ Engine/
   - Projects/
   - Shaders/
 
-- Source/&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;← Код
-  - Application/&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;← Слой 4
+- Source/           ← Код
+  - Application/            ← Слой 4
     - Window/
     - Input/
     - Kernel/
 
-  - Framework/&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;← Слой 3
+  - Framework/              ← Слой 3
     - AssetManager/
     - Camera/
     - EngineUI/
@@ -25,13 +25,13 @@ Engine/
     - Scene/
     - Transform/
 
-  - Renderer/&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;← Слой 2
+  - Renderer/               ← Слой 2
     - D3D12Engine/
       - Model/
       - Texture/
       - Backend/
         - DirectX12Graphics/
-        - RHI/&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;← Слой 1
+        - RHI/              ← Слой 1
           - Core/
             - CommandContext/
             - CommandContextPool/
