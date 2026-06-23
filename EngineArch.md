@@ -1,7 +1,7 @@
 ## Engine Tree
 
 Engine/
-- Assets/           ← Ассеты
+- Assets/           ← *Ассеты*
   - Config/
   - Models/
   - Fonts/
@@ -9,13 +9,13 @@ Engine/
   - Projects/
   - Shaders/
 
-- Source/           ← Код
-  - Application/            ← Слой 4
+- Source/           ← *Код*
+  - Application/            ← *Слой 4*
     - Window/
     - Input/
     - Kernel/
 
-  - Framework/              ← Слой 3
+  - Framework/              ← *Слой 3*
     - AssetManager/
     - Camera/
     - EngineUI/
@@ -25,13 +25,13 @@ Engine/
     - Scene/
     - Transform/
 
-  - Renderer/               ← Слой 2
+  - Renderer/               ← *Слой 2*
     - D3D12Engine/
       - Model/
       - Texture/
       - Backend/
         - DirectX12Graphics/
-        - RHI/              ← Слой 1
+        - RHI/              ← *Слой 1*
           - Core/
             - CommandContext/
             - CommandContextPool/
