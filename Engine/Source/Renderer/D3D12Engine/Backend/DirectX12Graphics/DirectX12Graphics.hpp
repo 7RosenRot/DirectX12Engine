@@ -46,11 +46,21 @@ namespace D3D12Engine {
     // ↓ Scene Rendering ↓
       void BeginFrame();
 
-      void DrawFrame(
+      void DrawNormal(
         D3D12Engine::Model& rModel,
         D3D12Engine::Texture& rTexture,
         const DirectX::XMMATRIX& rViewProjectionMatrix,
         bool isSelected
+      );
+
+      void DrawOutline(
+        D3D12Engine::Model& rModel,
+        const DirectX::XMMATRIX& rViewProjectionMatrix
+      );
+
+      void DrawStencil(
+        D3D12Engine::Model& rModel,
+        const DirectX::XMMATRIX& rViewProjectionMatrix
       );
 
       void EndFrame();
@@ -126,6 +136,7 @@ namespace D3D12Engine {
       RootSignature m_rootSignature;
       GraphicsPSO m_pipelineState{L"Main PipelineStateObject"};
       GraphicsPSO m_outlinePipelineState{L"Outline PipelineStateObject"};
+      GraphicsPSO m_stencilWritePipelineState{L"Stencil Write PipelineStateObject"};
     // ↑ Pipeline modules ↑
 
     void GetHardwareAdapter(

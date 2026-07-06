@@ -1,6 +1,0 @@
-GAMEOBJECT bastard_gun_corpus
-MODEL D:\Microsoft Visual Studio\Visual Studio Code\DirectX12Engine\Engine\Assets\Models\bastard_gun\bastard_gun_corpus.obj
-TEXTURE D:\Microsoft Visual Studio\Visual Studio Code\DirectX12Engine\Engine\Assets\Models\bastard_gun\bastard_gun_corpus.png
-POSITION -3.69019 0 1.94819
-ROTATION 1.48431 0.763169 0.483946
-SCALE 0.999998 0.999998 0.999997

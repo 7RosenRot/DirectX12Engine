@@ -73,6 +73,10 @@ namespace D3D12Engine {
     void SetRenderTargetFormat(
       DXGI_FORMAT rtvFormat, DXGI_FORMAT dsvFormat
     );
+
+    void SetColorWriteEnable(
+      bool enable
+    );
     
     void Finalize(
       ID3D12Device* pDevice

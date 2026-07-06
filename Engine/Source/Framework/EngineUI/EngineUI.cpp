@@ -128,6 +128,17 @@ EngineUI::EngineUI(
   ImGuiIO& io = ImGui::GetIO();
   io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
+  m_IniFilePath = "Engine/Assets/Config/imgui.ini";
+  io.IniFilename = m_IniFilePath.c_str();
+
+  io.Fonts->Clear();
+
+  ImFont* pMainFont = io.Fonts->AddFontFromFileTTF("Engine/Assets/Fonts/Inter.ttf", 16.0f);
+
+  if (pMainFont == nullptr) {
+    io.Fonts->AddFontDefault(); 
+  }
+
 #pragma region ImGui StyleConfig
   ImGuiStyle& Style = ImGui::GetStyle();
   Style.WindowRounding    = 8.0f;
@@ -173,6 +184,28 @@ EngineUI::EngineUI(
 EngineUI::~EngineUI() {
   Shutdown();
 }
+
+DirectX::XMFLOAT3 EngineUI::GetTathetPoint() {
+  DirectX::XMFLOAT3 targetPoint = { 0.0f, 0.0f, 0.0f };
+  if (!m_pSelectedObject.empty()) {
+    for (const auto& pObj : m_pSelectedObject) {
+      if (pObj) {
+        DirectX::XMFLOAT3 pos = pObj->GetTransform().GetPosition();
+        targetPoint.x += pos.x;
+        targetPoint.y += pos.y;
+        targetPoint.z += pos.z;
+      }
+    }
+    targetPoint.x /= m_pSelectedObject.size();
+    targetPoint.y /= m_pSelectedObject.size();
+    targetPoint.z /= m_pSelectedObject.size();
+  } else if (m_pScene != nullptr) {
+    targetPoint = m_pScene->GetActiveCamera().GetOrbitTarget();
+  }
+
+  return targetPoint;
+}
+
 
 void EngineUI::Initialize(
   ID3D12Device* pDevice,
@@ -234,6 +267,15 @@ void EngineUI::DrawUI() {
   }
   if (io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_Y, false)) {
     m_CommandHistory.Redo();
+  }
+
+  if (!io.WantTextInput && ImGui::IsKeyPressed(ImGuiKey_Delete, false)) {
+    if (!m_pSelectedObject.empty()) {
+      m_CommandHistory.ExecuteCommand(std::make_unique<DeleteCommand>(
+        m_pScene, m_pSelectedObject
+      ));
+      m_pSelectedObject.clear();
+    }
   }
 
   DrawDockSpace();
@@ -305,10 +347,16 @@ void EngineUI::DrawProjectUI() {
   if (ImGui::BeginMainMenuBar()) {
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
     ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 2.5f);
+
+    ImGui::SetCursorPos(ImVec2(5.0f, 0.0f));
     
     if (ImGui::Button("Scene")) {
       ImGui::OpenPopup("SceneMenuPopup");
     }
+
+    bool isSceneButtonHovered = ImGui::IsItemHovered(
+      ImGuiHoveredFlags_AllowWhenBlockedByPopup
+    );
 
     ImVec2 PopupPosition = ImVec2(ImGui::GetItemRectMin().x, ImGui::GetItemRectMax().y);
 
@@ -318,24 +366,43 @@ void EngineUI::DrawProjectUI() {
     ImGui::SetNextWindowPos(PopupPosition);
 
     if (ImGui::BeginPopup("SceneMenuPopup")) {
+      
+      ImVec2 BtnSize = ImVec2(75.0f, 0.0f);
 
-      if (ImGui::Button("Save As...")) {
+      ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.0f, 0.5f));
+
+      if (ImGui::Button("Open...", BtnSize)) {
+        std::string FilePath = OpenFileDialog(m_hwnd, "Rose Scene (*.rose)\0*.rose\0");
+        
+        if (!FilePath.empty()) {
+          m_pScene->LoadScene(FilePath);
+          m_pSelectedObject.clear();
+        }
+
+        ImGui::CloseCurrentPopup();
+      }
+
+      if (ImGui::Button("Save As...", BtnSize)) {
         std::string FilePath = SaveFileDialog(m_hwnd, "Rose Scene (*.rose)\0*.rose\0");
         
         if (!FilePath.empty()) {
           m_pScene->SaveScene(FilePath);
         }
+
+        ImGui::CloseCurrentPopup();
       }
+
+      ImGui::PopStyleVar();
+
+      bool isPopupHovered = ImGui::IsWindowHovered(
+        ImGuiHoveredFlags_AllowWhenBlockedByPopup |
+        ImGuiHoveredFlags_AllowWhenBlockedByActiveItem
+      );
       
-      if (ImGui::Button("Open...")) {
-        std::string FilePath = OpenFileDialog(m_hwnd, "Rose Scene (*.rose)\0*.rose\0");
-        
-        if (!FilePath.empty()) {
-          m_pScene->LoadScene(FilePath);
-          m_SelectedObject = nullptr;
-        }
+      if (!isPopupHovered && !isSceneButtonHovered) {
+        ImGui::CloseCurrentPopup();
       }
-      
+
       ImGui::EndPopup();
     }
 
@@ -448,7 +515,21 @@ void EngineUI::DrawViewportUI() {
         }
       }
 
-      m_SelectedObject = closestObj;
+      if (ImGui::GetIO().KeyCtrl) {
+        if (closestObj) {
+          auto it = std::find(m_pSelectedObject.begin(), m_pSelectedObject.end(), closestObj);
+          if (it != m_pSelectedObject.end()) {
+            m_pSelectedObject.erase(it);
+          } else {
+            m_pSelectedObject.push_back(closestObj);
+          }
+        }
+      } else {
+        m_pSelectedObject.clear();
+        if (closestObj) {
+          m_pSelectedObject.push_back(closestObj);
+        }
+      }
     }
     // ↑ Raycasting Selection ↑
 
@@ -568,7 +649,7 @@ void EngineUI::DrawBrowserUI() {
     ImGui::IsMouseClicked(0) &&
     !ImGui::IsAnyItemHovered()
   ) {
-    m_SelectedObject = nullptr;
+    m_pSelectedObject.clear();
   }
 
   // ↓ Object Icon ↓
@@ -588,7 +669,8 @@ void EngineUI::DrawBrowserUI() {
   for (auto& [ObjectName, pGameObject] : SceneObjects) {
     ImGui::PushID(pGameObject.get());
 
-    if (m_SelectedObject == pGameObject) {
+    bool isSelected = std::find(m_pSelectedObject.begin(), m_pSelectedObject.end(), pGameObject) != m_pSelectedObject.end();
+    if (isSelected) {
       ImGui::PushStyleColor(
         ImGuiCol_Button,
         ImVec4(0.3f, 0.4f, 0.8f, 1.0f)
@@ -607,7 +689,17 @@ void EngineUI::DrawBrowserUI() {
         ImVec2(Thumbnail, Thumbnail)
       )
     ) {
-      m_SelectedObject = pGameObject;
+      if (ImGui::GetIO().KeyCtrl) {
+        auto it = std::find(m_pSelectedObject.begin(), m_pSelectedObject.end(), pGameObject);
+        if (it != m_pSelectedObject.end()) {
+          m_pSelectedObject.erase(it);
+        } else {
+          m_pSelectedObject.push_back(pGameObject);
+        }
+      } else {
+        m_pSelectedObject.clear();
+        m_pSelectedObject.push_back(pGameObject);
+      }
     }
     
     ImGui::PopStyleColor();
@@ -625,19 +717,20 @@ void EngineUI::DrawBrowserUI() {
 void EngineUI::DrawPropertiesUI() {
   ImGui::Begin("Properties", nullptr, WindowFlags);
 
-  if (m_SelectedObject != nullptr) {
+  if (m_pSelectedObject.size() == 1) {
+    auto& pSelected = m_pSelectedObject[0];
     char NameBuffer[256];
-    strcpy_s(NameBuffer, m_SelectedObject->GetObjectName().c_str());
+    strcpy_s(NameBuffer, pSelected->GetObjectName().c_str());
 
     if (ImGui::InputText("Name", NameBuffer, sizeof(NameBuffer))) {
-      m_SelectedObject->GetObjectName() = NameBuffer;
+      pSelected->GetObjectName() = NameBuffer;
     }
 
     ImGui::Separator();
     ImGui::Text("Transform");
     ImGui::Spacing();
 
-    auto& rTransform = m_SelectedObject->GetTransform();
+    auto& rTransform = pSelected->GetTransform();
 
     // ↓ Position ↓
     DirectX::XMFLOAT3 Position = rTransform.GetPosition();
@@ -660,9 +753,9 @@ void EngineUI::DrawPropertiesUI() {
     if (ImGui::DragFloat3("Rotation", RotationDeg, 0.5f)) {
       if (!m_PropertiesEditing) { m_PropertiesInitialTransform = rTransform; m_PropertiesEditing = true; }
       rTransform.SetRotation(
-        DirectX::XMConvertToRadians(RotationDeg[0]),
-        DirectX::XMConvertToRadians(RotationDeg[1]),
-        DirectX::XMConvertToRadians(RotationDeg[2])
+        RotationDeg[0],
+        RotationDeg[1],
+        RotationDeg[2]
       );
     }
     // ↑ Rotation ↑
@@ -679,7 +772,7 @@ void EngineUI::DrawPropertiesUI() {
 
     if (m_PropertiesEditing && !ImGui::IsAnyItemActive()) {
       m_CommandHistory.ExecuteCommand(std::make_unique<TransformCommand>(
-        m_SelectedObject, m_PropertiesInitialTransform, rTransform
+        pSelected, m_PropertiesInitialTransform, rTransform
       ));
       m_PropertiesEditing = false;
     }
@@ -691,12 +784,12 @@ void EngineUI::DrawPropertiesUI() {
       std::string FilePath = OpenFileDialog(m_hwnd, "Image Files...\0*.png\0*.jpg\0");
 
       if (!FilePath.empty()) {
-        m_SelectedObject->LoadTexture(FilePath);
+        pSelected->LoadTexture(FilePath);
       }
     }
-  }
-
-  else {
+  } else if (m_pSelectedObject.size() > 1) {
+    ImGui::Text("Selected: %d objects", static_cast<int>(m_pSelectedObject.size()));
+  } else {
     ImGui::Text("Select an object...");
   }
 
@@ -704,7 +797,7 @@ void EngineUI::DrawPropertiesUI() {
 }
 
 void EngineUI::DrawGizmo() {
-  if (m_SelectedObject == nullptr || m_GizmoType == -1) {
+  if (m_pSelectedObject.empty() || m_GizmoType == -1) {
     m_GizmoActive = false;
     
     return;
@@ -718,6 +811,10 @@ void EngineUI::DrawGizmo() {
   float ViewportHeight = m_ViewportBoundsMax.y - m_ViewportBoundsMin.y;
   ImGuizmo::SetRect(m_ViewportBoundsMin.x, m_ViewportBoundsMin.y, ViewportWidth, ViewportHeight);
 
+  if (ViewportHeight > 0.0f) {
+    ImGuizmo::SetGizmoSizeClipSpace(0.1f * (500.0f / ViewportHeight));
+  }
+
   // ↓ Матрицы камеры ↓
   // DirectXMath хранит матрицы row-major. ImGuizmo читает float[16] column-major.
   // Свойство: DX row-major и GLM column-major одних и тех же байт — это математически
@@ -727,16 +824,31 @@ void EngineUI::DrawGizmo() {
   DirectX::XMMATRIX ProjectionMatrix = m_pScene->GetActiveCamera().GetMatrixProjection();
   // ↑ Матрицы камеры ↑
 
-  // ↓ Model Matrix ↓
-  auto& rTransform = m_SelectedObject->GetTransform();
-  DirectX::XMMATRIX ModelMatrix = rTransform.GetMatrixModel();
-  // ↑ Model Matrix ↑
+  // Calculate common center (average position)
+  DirectX::XMFLOAT3 avgPos = { 0.0f, 0.0f, 0.0f };
+  for (const auto& pObj : m_pSelectedObject) {
+    DirectX::XMFLOAT3 pos = pObj->GetTransform().GetPosition();
+    avgPos.x += pos.x;
+    avgPos.y += pos.y;
+    avgPos.z += pos.z;
+  }
+  avgPos.x /= m_pSelectedObject.size();
+  avgPos.y /= m_pSelectedObject.size();
+  avgPos.z /= m_pSelectedObject.size();
+
+  // Create group matrix at the average position with no rotation and identity scale
+  DirectX::XMMATRIX GroupMatrix = DirectX::XMMatrixTranslation(avgPos.x, avgPos.y, avgPos.z);
+
+  // If we were using the gizmo, keep the current group matrix
+  if (m_GizmoWasUsing) {
+    GroupMatrix = DirectX::XMLoadFloat4x4(&m_GizmoCurrentGroupMatrix);
+  }
 
   // Загружаем в массивы float[16] без дополнительных преобразований
-  DirectX::XMFLOAT4X4 ViewFloat, ProjectionFloat, ModelFloat;
+  DirectX::XMFLOAT4X4 ViewFloat, ProjectionFloat, GroupFloat;
   DirectX::XMStoreFloat4x4(&ViewFloat,       ViewMatrix);
   DirectX::XMStoreFloat4x4(&ProjectionFloat, ProjectionMatrix);
-  DirectX::XMStoreFloat4x4(&ModelFloat,      ModelMatrix);
+  DirectX::XMStoreFloat4x4(&GroupFloat,      GroupMatrix);
 
   ImGuizmo::AllowAxisFlip(false);
   ImGuizmo::Manipulate(
@@ -744,45 +856,77 @@ void EngineUI::DrawGizmo() {
     reinterpret_cast<const float*>(&ProjectionFloat),
     static_cast<ImGuizmo::OPERATION>(m_GizmoType),
     ImGuizmo::WORLD,
-    reinterpret_cast<float*>(&ModelFloat)
+    reinterpret_cast<float*>(&GroupFloat)
   );
 
   if (ImGuizmo::IsUsing()) {
     if (!m_GizmoWasUsing) {
-      m_GizmoInitialTransform = rTransform;
+      // Record initial transforms
+      m_GizmoInitialTransforms.clear();
+      for (auto& pObj : m_pSelectedObject) {
+        m_GizmoInitialTransforms.push_back(pObj->GetTransform());
+      }
+      // Record initial and current group matrix
+      DirectX::XMStoreFloat4x4(&m_GizmoInitialGroupMatrix, GroupMatrix);
+      DirectX::XMStoreFloat4x4(&m_GizmoCurrentGroupMatrix, GroupMatrix);
       m_GizmoWasUsing = true;
     }
     m_GizmoActive = true;
 
-    // ↓ Читаем результат обратно: XMLoadFloat4x4 уже даёт корректную DX-матрицу ↓
-    // ImGuizmo записал результат в тот же float[16] — байты совместимы напрямую.
-    DirectX::XMMATRIX ResultMatrix = DirectX::XMLoadFloat4x4(&ModelFloat);
-    // ↑ Читаем результат обратно ↑
+    // Calculate delta matrix: Delta = InvInitialGroup * ResultGroup
+    DirectX::XMMATRIX InitialGroupMatrix = DirectX::XMLoadFloat4x4(&m_GizmoInitialGroupMatrix);
+    DirectX::XMMATRIX InvInitialGroup = DirectX::XMMatrixInverse(nullptr, InitialGroupMatrix);
+    DirectX::XMMATRIX ResultGroupMatrix = DirectX::XMLoadFloat4x4(&GroupFloat);
+    
+    // Store the updated current group matrix
+    DirectX::XMStoreFloat4x4(&m_GizmoCurrentGroupMatrix, ResultGroupMatrix);
 
-    // Декомпозируем матрицу на составляющие
-    DirectX::XMVECTOR ScaleVector, RotationQuaternion, TranslationVector;
-    DirectX::XMMatrixDecompose(&ScaleVector, &RotationQuaternion, &TranslationVector, ResultMatrix);
+    DirectX::XMMATRIX DeltaMatrix = InvInitialGroup * ResultGroupMatrix;
 
-    DirectX::XMFLOAT3 NewPosition, NewScale;
-    DirectX::XMStoreFloat3(&NewPosition, TranslationVector);
-    DirectX::XMStoreFloat3(&NewScale,    ScaleVector);
+    // Apply delta matrix to all selected objects
+    for (size_t i = 0; i < m_pSelectedObject.size(); ++i) {
+      auto& pObj = m_pSelectedObject[i];
+      auto& rTransform = pObj->GetTransform();
+      
+      DirectX::XMMATRIX InitialModelMatrix = m_GizmoInitialTransforms[i].GetMatrixModel();
+      DirectX::XMMATRIX NewModelMatrix = InitialModelMatrix * DeltaMatrix;
+      
+      DirectX::XMVECTOR ScaleVector, RotationQuaternion, TranslationVector;
+      DirectX::XMMatrixDecompose(&ScaleVector, &RotationQuaternion, &TranslationVector, NewModelMatrix);
 
-    // Кватернион → матрица вращения → углы Эйлера (Pitch, Yaw, Roll)
-    DirectX::XMMATRIX RotationMatrix = DirectX::XMMatrixRotationQuaternion(RotationQuaternion);
-    DirectX::XMFLOAT4X4 RotFloat;
-    DirectX::XMStoreFloat4x4(&RotFloat, RotationMatrix);
+      DirectX::XMFLOAT3 NewPosition, NewScale;
+      DirectX::XMStoreFloat3(&NewPosition, TranslationVector);
+      DirectX::XMStoreFloat3(&NewScale,    ScaleVector);
 
-    float Pitch = asinf(-RotFloat._32);
-    float Yaw   = atan2f(RotFloat._31, RotFloat._33);
-    float Roll  = atan2f(RotFloat._12, RotFloat._22);
+      DirectX::XMMATRIX RotationMatrix = DirectX::XMMatrixRotationQuaternion(RotationQuaternion);
+      DirectX::XMFLOAT4X4 RotFloat;
+      DirectX::XMStoreFloat4x4(&RotFloat, RotationMatrix);
 
-    rTransform.SetPosition(NewPosition.x, NewPosition.y, NewPosition.z);
-    rTransform.SetRotation(Pitch, Yaw, Roll);
-    rTransform.SetScale(NewScale.x, NewScale.y, NewScale.z);
+      float val = -RotFloat._32;
+      if (val < -1.0f) val = -1.0f;
+      else if (val > 1.0f) val = 1.0f;
+      float Pitch = asinf(val);
+      float Yaw   = atan2f(RotFloat._31, RotFloat._33);
+      float Roll  = atan2f(RotFloat._12, RotFloat._22);
+
+      rTransform.SetPosition(NewPosition.x, NewPosition.y, NewPosition.z);
+      rTransform.SetRotation(
+        DirectX::XMConvertToDegrees(Pitch),
+        DirectX::XMConvertToDegrees(Yaw),
+        DirectX::XMConvertToDegrees(Roll)
+      );
+      rTransform.SetScale(NewScale.x, NewScale.y, NewScale.z);
+    }
   } else {
     if (m_GizmoWasUsing) {
-      m_CommandHistory.ExecuteCommand(std::make_unique<TransformCommand>(
-        m_SelectedObject, m_GizmoInitialTransform, rTransform
+      // Record new transforms and create multi-transform command
+      std::vector<Transform> NewTransforms;
+      for (auto& pObj : m_pSelectedObject) {
+        NewTransforms.push_back(pObj->GetTransform());
+      }
+      
+      m_CommandHistory.ExecuteCommand(std::make_unique<MultiTransformCommand>(
+        m_pSelectedObject, m_GizmoInitialTransforms, NewTransforms
       ));
       m_GizmoWasUsing = false;
     }

@@ -5,9 +5,11 @@ HWND Input::m_Hwnd = nullptr;
 bool Input::m_Keys[256] = {false};
 
 bool  Input::m_MouseLocker         = false;
+bool  Input::m_MmbMode             = false;
 bool  Input::m_IgnoreNextMouseMove = false;
 float Input::m_MouseDeltaX         = 0.0F;
 float Input::m_MouseDeltaY         = 0.0F;
+float Input::m_MouseWheelDelta     = 0.0F;
 // ↑ Initializing ↑
 
 void Input::Initialize(HWND hwnd) {
@@ -95,4 +97,11 @@ void Input::GetMouseDelta(float& dx, float& dy) {
 
   m_MouseDeltaX = 0.0F;
   m_MouseDeltaY = 0.0F;
+}
+
+float Input::GetMouseWheelDelta() {
+  float Delta = m_MouseWheelDelta;
+  m_MouseWheelDelta = 0.0F;
+  
+  return Delta;
 }

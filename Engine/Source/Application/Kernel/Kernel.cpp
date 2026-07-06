@@ -37,7 +37,8 @@ void Kernel::AppInitialize(
 
   m_pScene = std::make_unique<Scene>();
   m_pScene->Initialize(m_pAssetManager.get());
-  m_pScene->GetActiveCamera().GetTransform().SetPosition(0.0F, 3.5F, -10.0F);
+  m_pScene->GetActiveCamera().GetTransform().SetPosition(12.5F, 12.5F, -12.5F);
+  m_pScene->GetActiveCamera().GetTransform().SetRotation(20.0F, -45.0F, 0.0F);
 
   m_pEngineUI = std::make_unique<EngineUI>(
     Window::GetHwnd(), m_pRenderer.get(), m_pScene.get()
@@ -46,7 +47,7 @@ void Kernel::AppInitialize(
     m_pRenderer->GetDevice(),
     m_pRenderer->GetCommandQueueResource(),
     D3D12Engine::GraphicsCore::FrameCount,
-    DXGI_FORMAT_R8G8B8A8_UNORM,
+    D3D12Engine::GraphicsCore::BackBufferFormat,
     *(m_pRenderer->GetSrvAllocator()),
     m_pAssetManager.get()
   );
@@ -87,11 +88,12 @@ void Kernel::RenderFrame() {
     m_pRenderer && m_pScene && m_pEngineUI
   ) {
     m_pEngineUI->UpdateLayout();
-    m_pScene->UpdateScene(0.10F, 0.05F, m_pEngineUI->IsGizmoActive());
+
+    m_pScene->UpdateScene(0.10F, 0.05F, m_pEngineUI->IsGizmoActive(), m_pEngineUI->GetTathetPoint());
     
     m_pRenderer->BeginFrame();
     
-    m_pScene->RenderScene(*m_pRenderer, m_pEngineUI->GetSelectedObject());
+    m_pScene->RenderScene(*m_pRenderer, m_pEngineUI->GetSelectedObjects());
     m_pRenderer->PrepareUIContext();
     
     m_pEngineUI->BeginUI();

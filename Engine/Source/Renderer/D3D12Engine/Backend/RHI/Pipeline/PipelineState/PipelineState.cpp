@@ -86,6 +86,10 @@ void D3D12Engine::GraphicsPSO::SetRenderTargetFormat(DXGI_FORMAT rtvFormat, DXGI
   m_psoDesc.DSVFormat = dsvFormat;
 }
 
+void D3D12Engine::GraphicsPSO::SetColorWriteEnable(bool enable) {
+  m_psoDesc.BlendState.RenderTarget[0].RenderTargetWriteMask = enable ? D3D12_COLOR_WRITE_ENABLE_ALL : 0;
+}
+
 void D3D12Engine::GraphicsPSO::Finalize(ID3D12Device* pDevice) {
   m_psoDesc.InputLayout.pInputElementDescs = m_inputLayoutDesc.data();
   m_psoDesc.InputLayout.NumElements = static_cast<UINT>(m_inputLayoutDesc.size());

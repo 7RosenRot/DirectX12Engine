@@ -50,15 +50,19 @@ class EngineUI {
   }
   // ↑ Gizmo Query ↑
 
+  DirectX::XMFLOAT3 GetTathetPoint();
+
   // ↓ Selection Query ↓
-  std::shared_ptr<GameObject> GetSelectedObject() const {
-    return m_SelectedObject;
+  const std::vector<std::shared_ptr<GameObject>>& GetSelectedObjects() const {
+    return m_pSelectedObject;
   }
   // ↑ Selection Query ↑
 
  private:
   HWND m_hwnd;
-  std::shared_ptr<GameObject>     m_SelectedObject = nullptr;
+  std::string m_IniFilePath;
+  std::vector<std::shared_ptr<GameObject>> m_pSelectedObject;
+  
   D3D12Engine::DirectX12Graphics* m_pRenderer = nullptr;
   Scene*                          m_pScene = nullptr;
   AssetManager*                   m_pAssetManager = nullptr;
@@ -78,7 +82,9 @@ class EngineUI {
 
   // ↓ Undo/Redo State ↓
   CommandHistory m_CommandHistory;
-  Transform m_GizmoInitialTransform;
+  std::vector<Transform> m_GizmoInitialTransforms;
+  DirectX::XMFLOAT4X4 m_GizmoInitialGroupMatrix;
+  DirectX::XMFLOAT4X4 m_GizmoCurrentGroupMatrix;
   bool m_GizmoWasUsing = false;
   
   Transform m_PropertiesInitialTransform;

@@ -147,6 +147,7 @@ void D3D12Engine::DirectX12Graphics::OnDestroy() {
 
   m_pipelineState.Shutdown();
   m_outlinePipelineState.Shutdown();
+  m_stencilWritePipelineState.Shutdown();
   m_rootSignature.Shutdown();
 
   m_SrvAllocator.reset();
@@ -388,11 +389,7 @@ void D3D12Engine::DirectX12Graphics::LoadAssets() {
   
   m_outlinePipelineState.SetFrontCounterClockwise(true);
   
-  m_outlinePipelineState.SetDepthTest(true);
-  
-  m_outlinePipelineState.SetDepthFunc(
-    D3D12_COMPARISON_FUNC_LESS_EQUAL
-  );
+  m_outlinePipelineState.SetDepthTest(false);
   
   m_outlinePipelineState.SetStencilTest(
     true,
@@ -412,6 +409,41 @@ void D3D12Engine::DirectX12Graphics::LoadAssets() {
   m_outlinePipelineState.Finalize(
     m_device.Get()
   );
+#pragma endregion
+
+#pragma region Stencil Write PSO Set Up
+  m_stencilWritePipelineState.SetRootSignature(m_rootSignature);
+  
+  m_stencilWritePipelineState.SetVertexShader(
+    vertexShader->GetBufferPointer(), vertexShader->GetBufferSize()
+  );
+  
+  m_stencilWritePipelineState.SetInputLayout(
+    _countof(inputElementDescriptor), inputElementDescriptor
+  );
+  
+  m_stencilWritePipelineState.SetCullMode(D3D12_CULL_MODE_BACK);
+  m_stencilWritePipelineState.SetFrontCounterClockwise(true);
+  
+  m_stencilWritePipelineState.SetDepthTest(false);
+  m_stencilWritePipelineState.SetColorWriteEnable(false);
+  
+  m_stencilWritePipelineState.SetStencilTest(
+    true,
+    D3D12_COMPARISON_FUNC_ALWAYS,
+    D3D12_STENCIL_OP_KEEP,
+    D3D12_STENCIL_OP_KEEP,
+    D3D12_STENCIL_OP_REPLACE,
+    0xFF,
+    0xFF
+  );
+  
+  m_stencilWritePipelineState.SetRenderTargetFormat(
+    DXGI_FORMAT_R8G8B8A8_UNORM,
+    DXGI_FORMAT_D24_UNORM_S8_UINT
+  );
+  
+  m_stencilWritePipelineState.Finalize(m_device.Get());
 #pragma endregion
 #pragma endregion
 }
@@ -497,7 +529,7 @@ void D3D12Engine::DirectX12Graphics::BeginFrame() {
   m_pFrameContext->SetPipelineState(m_pipelineState.GetPipelineState());
 }
 
-void D3D12Engine::DirectX12Graphics::DrawFrame(
+void D3D12Engine::DirectX12Graphics::DrawNormal(
   D3D12Engine::Model& rModel,
   D3D12Engine::Texture& rTexture,
   const DirectX::XMMATRIX& rViewProjectionMatrix,
@@ -507,18 +539,43 @@ void D3D12Engine::DirectX12Graphics::DrawFrame(
 
   m_pFrameContext->GetCommandList()->SetGraphicsRoot32BitConstants(0, 16, &rViewProjectionMatrix, 0);
 
-  // Set Stencil Reference to 1 before drawing the normal model
-  m_pFrameContext->GetCommandList()->OMSetStencilRef(1);
+  if (isSelected) {
+    m_pFrameContext->GetCommandList()->OMSetStencilRef(1);
+  } else {
+    m_pFrameContext->GetCommandList()->OMSetStencilRef(0);
+  }
 
   rModel.DrawModel(*m_pFrameContext);
+}
 
-  if (isSelected) {
-    m_pFrameContext->SetPipelineState(m_outlinePipelineState.GetPipelineState());
-    rModel.DrawModel(*m_pFrameContext);
-    
-    // Restore normal pipeline state
-    m_pFrameContext->SetPipelineState(m_pipelineState.GetPipelineState());
-  }
+void D3D12Engine::DirectX12Graphics::DrawOutline(
+  D3D12Engine::Model& rModel,
+  const DirectX::XMMATRIX& rViewProjectionMatrix
+) {
+  m_pFrameContext->GetCommandList()->SetGraphicsRoot32BitConstants(0, 16, &rViewProjectionMatrix, 0);
+
+  m_pFrameContext->GetCommandList()->OMSetStencilRef(1);
+  m_pFrameContext->SetPipelineState(m_outlinePipelineState.GetPipelineState());
+
+  rModel.DrawModel(*m_pFrameContext);
+  
+  // Restore normal pipeline state
+  m_pFrameContext->SetPipelineState(m_pipelineState.GetPipelineState());
+}
+
+void D3D12Engine::DirectX12Graphics::DrawStencil(
+  D3D12Engine::Model& rModel,
+  const DirectX::XMMATRIX& rViewProjectionMatrix
+) {
+  m_pFrameContext->GetCommandList()->SetGraphicsRoot32BitConstants(0, 16, &rViewProjectionMatrix, 0);
+
+  m_pFrameContext->GetCommandList()->OMSetStencilRef(1);
+  m_pFrameContext->SetPipelineState(m_stencilWritePipelineState.GetPipelineState());
+
+  rModel.DrawModel(*m_pFrameContext);
+  
+  // Restore normal pipeline state
+  m_pFrameContext->SetPipelineState(m_pipelineState.GetPipelineState());
 }
 
 void D3D12Engine::DirectX12Graphics::EndFrame() {

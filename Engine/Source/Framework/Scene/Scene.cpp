@@ -5,6 +5,7 @@
 #include <Renderer/D3D12Engine/Backend/DirectX12Graphics/DirectX12Graphics.hpp>
 #include <fstream>
 #include <sstream>
+#include <algorithm>
 
 void Scene::Initialize(AssetManager* pAssetManager) {
   m_pAssetManager = pAssetManager;
@@ -24,26 +25,42 @@ void Scene::AddGameObject(const std::string& FilePath) {
   m_GameObjects[ObjectName] = pNewObject;
 }
 
-void Scene::UpdateScene(const float MovementSpeed, const float MouseSensivity, bool BlockCameraInput) {
+void Scene::UpdateScene(const float MovementSpeed, const float MouseSensivity, bool BlockCameraInput, const DirectX::XMFLOAT3& TargetPoint) {
   if (!BlockCameraInput) {
-    m_ActiveCamera.InputProcessing(MovementSpeed, MouseSensivity);
+    m_ActiveCamera.InputProcessing(MovementSpeed, MouseSensivity, TargetPoint);
   }
 }
 
-void Scene::RenderScene(D3D12Engine::DirectX12Graphics& rRenderer, std::shared_ptr<GameObject> pSelectedObject) {
+void Scene::RenderScene(D3D12Engine::DirectX12Graphics& rRenderer, const std::vector<std::shared_ptr<GameObject>>& selectedObjects) {
   DirectX::XMMATRIX View = m_ActiveCamera.GetTransform().GetMatrixView();
   DirectX::XMMATRIX Projection = m_ActiveCamera.GetMatrixProjection();
 
   for (auto& [ObjectName, pGameObject] : m_GameObjects) {
     pGameObject->UpdateModelMatrix(View, Projection);
 
-    bool isSelected = (pGameObject == pSelectedObject);
-    rRenderer.DrawFrame(
+    bool isSelected = (
+      std::find(
+        selectedObjects.begin(), selectedObjects.end(), pGameObject) != selectedObjects.end()
+    );
+    
+    rRenderer.DrawNormal(
       *pGameObject->GetModel(),
       *pGameObject->GetTexture(),
       pGameObject->GetModelMatrix(),
       isSelected
     );
+
+    if (isSelected) {
+      rRenderer.DrawStencil(
+        *pGameObject->GetModel(),
+        pGameObject->GetModelMatrix()
+      );
+
+      rRenderer.DrawOutline(
+        *pGameObject->GetModel(),
+        pGameObject->GetModelMatrix()
+      );
+    }
   }
 }
 
@@ -51,18 +68,18 @@ void Scene::SaveScene(const std::string& FilePath) {
   std::ofstream File(FilePath);
   if (!File.is_open()) return;
 
-  for (auto& [Name, pObj] : m_GameObjects) {
-    File << "GAMEOBJECT " << Name << "\n";
-    File << "MODEL " << pObj->GetModelPath() << "\n";
-    File << "TEXTURE " << pObj->GetTexturePath() << "\n";
+  for (auto& [ObjectName, pObject] : m_GameObjects) {
+    File << "GAMEOBJECT " << ObjectName << "\n";
+    File << "MODEL " << pObject->GetModelPath() << "\n";
+    File << "TEXTURE " << pObject->GetTexturePath() << "\n";
     
-    auto pos = pObj->GetTransform().GetPosition();
+    auto pos = pObject->GetTransform().GetPosition();
     File << "POSITION " << pos.x << " " << pos.y << " " << pos.z << "\n";
     
-    auto rot = pObj->GetTransform().GetRotation();
+    auto rot = pObject->GetTransform().GetRotation();
     File << "ROTATION " << rot.x << " " << rot.y << " " << rot.z << "\n";
     
-    auto scale = pObj->GetTransform().GetScale();
+    auto scale = pObject->GetTransform().GetScale();
     File << "SCALE " << scale.x << " " << scale.y << " " << scale.z << "\n";
   }
 }
@@ -84,10 +101,10 @@ void Scene::LoadScene(const std::string& FilePath) {
     Iss >> Token;
 
     if (Token == "GAMEOBJECT") {
-      std::string Name;
-      std::getline(Iss >> std::ws, Name);
-      pCurrentObj = std::make_shared<GameObject>(m_pAssetManager, Name);
-      m_GameObjects[Name] = pCurrentObj;
+      std::string ObjectName;
+      std::getline(Iss >> std::ws, ObjectName);
+      pCurrentObj = std::make_shared<GameObject>(m_pAssetManager, ObjectName);
+      m_GameObjects[ObjectName] = pCurrentObj;
     } else if (pCurrentObj) {
       if (Token == "MODEL") {
         std::string Path;
@@ -104,7 +121,11 @@ void Scene::LoadScene(const std::string& FilePath) {
       } else if (Token == "ROTATION") {
         float x, y, z;
         Iss >> x >> y >> z;
-        pCurrentObj->GetTransform().SetRotation(x, y, z);
+        pCurrentObj->GetTransform().SetRotation(
+          DirectX::XMConvertToDegrees(x),
+          DirectX::XMConvertToDegrees(y),
+          DirectX::XMConvertToDegrees(z)
+        );
       } else if (Token == "SCALE") {
         float x, y, z;
         Iss >> x >> y >> z;
