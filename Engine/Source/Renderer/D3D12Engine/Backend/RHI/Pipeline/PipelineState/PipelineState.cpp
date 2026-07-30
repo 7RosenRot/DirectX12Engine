@@ -1,6 +1,10 @@
 #include <Renderer/D3D12Engine/Backend/RHI/Pipeline/PipelineState/PipelineState.hpp>
 
-D3D12Engine::GraphicsPSO::GraphicsPSO(const wchar_t* Name) : PSO(Name) {
+D3D12Engine::GraphicsPSO::GraphicsPSO(
+  const wchar_t* Name
+) :
+  PSO(Name)
+{
   ZeroMemory(&m_psoDesc, sizeof(m_psoDesc));
   
   m_psoDesc.NodeMask = 1;
@@ -48,10 +52,42 @@ void D3D12Engine::GraphicsPSO::SetDepthTest(bool enable) {
   m_psoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
 }
 
+void D3D12Engine::GraphicsPSO::SetDepthFunc(D3D12_COMPARISON_FUNC depthFunc) {
+  m_psoDesc.DepthStencilState.DepthFunc = depthFunc;
+}
+
+void D3D12Engine::GraphicsPSO::SetStencilTest(
+  bool                  isEnable,
+  D3D12_COMPARISON_FUNC Func,
+  D3D12_STENCIL_OP      FailOp,
+  D3D12_STENCIL_OP      DepthFailOp,
+  D3D12_STENCIL_OP      PassOp,
+  UINT8                 ReadMask,
+  UINT8                 WriteMask
+) {
+  m_psoDesc.DepthStencilState.StencilEnable                = isEnable;
+  m_psoDesc.DepthStencilState.StencilReadMask              = ReadMask;
+  m_psoDesc.DepthStencilState.StencilWriteMask             = WriteMask;
+  
+  m_psoDesc.DepthStencilState.FrontFace.StencilFailOp      = FailOp;
+  m_psoDesc.DepthStencilState.FrontFace.StencilDepthFailOp = DepthFailOp;
+  m_psoDesc.DepthStencilState.FrontFace.StencilPassOp      = PassOp;
+  m_psoDesc.DepthStencilState.FrontFace.StencilFunc        = Func;
+  
+  m_psoDesc.DepthStencilState.BackFace.StencilFailOp       = FailOp;
+  m_psoDesc.DepthStencilState.BackFace.StencilDepthFailOp  = DepthFailOp;
+  m_psoDesc.DepthStencilState.BackFace.StencilPassOp       = PassOp;
+  m_psoDesc.DepthStencilState.BackFace.StencilFunc         = Func;
+}
+
 void D3D12Engine::GraphicsPSO::SetRenderTargetFormat(DXGI_FORMAT rtvFormat, DXGI_FORMAT dsvFormat) {
   m_psoDesc.NumRenderTargets = 1;
   m_psoDesc.RTVFormats[0] = rtvFormat;
   m_psoDesc.DSVFormat = dsvFormat;
+}
+
+void D3D12Engine::GraphicsPSO::SetColorWriteEnable(bool enable) {
+  m_psoDesc.BlendState.RenderTarget[0].RenderTargetWriteMask = enable ? D3D12_COLOR_WRITE_ENABLE_ALL : 0;
 }
 
 void D3D12Engine::GraphicsPSO::Finalize(ID3D12Device* pDevice) {

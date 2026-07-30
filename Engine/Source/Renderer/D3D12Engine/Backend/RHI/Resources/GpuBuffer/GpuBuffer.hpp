@@ -7,8 +7,12 @@ namespace D3D12Engine {
    public:
     virtual ~GpuBuffer() {}
     
-    void Create(ID3D12Device* pDevice, const std::wstring& name,
-      UINT sizeInBytes, const void* initialData = nullptr);
+    void Create(
+      ID3D12Device* pDevice,
+      const std::wstring& name,
+      UINT sizeInBytes,
+      const void* initialData = nullptr
+    );
     
     void CreateUploadable(ID3D12Device* device, const std::wstring& name, UINT sizeInBytes);
     
@@ -20,7 +24,11 @@ namespace D3D12Engine {
   
   class GpuConstantBuffer : public GpuBuffer {
    public:
-    void CreateUploadable(ID3D12Device* device, const std::wstring& name, UINT sizeInBytes);
+    void CreateUploadable(
+      ID3D12Device* device,
+      const std::wstring& name,
+      UINT sizeInBytes
+    );
     
     D3D12_GPU_VIRTUAL_ADDRESS GetGpuVirtualAddress() const {
       return m_pResource->GetGPUVirtualAddress();

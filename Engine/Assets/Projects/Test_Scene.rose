@@ -1,0 +1,18 @@
+GAMEOBJECT Cube
+MODEL D:\Microsoft Visual Studio\Visual Studio Code\DirectX12Engine\Engine\Assets\Models\Simple\Cube.obj
+TEXTURE 
+POSITION 0 0 0
+ROTATION 0 0 0
+SCALE 20 0.5 20
+GAMEOBJECT bastard_gun_corpus
+MODEL D:\Microsoft Visual Studio\Visual Studio Code\DirectX12Engine\Engine\Assets\Models\bastard_gun\bastard_gun_corpus.obj
+TEXTURE D:\Microsoft Visual Studio\Visual Studio Code\DirectX12Engine\Engine\Assets\Models\bastard_gun\bastard_gun_corpus.png
+POSITION 0 5 0
+ROTATION 0 0 0
+SCALE 1 1 1
+GAMEOBJECT bastard_gun_corob
+MODEL D:\Microsoft Visual Studio\Visual Studio Code\DirectX12Engine\Engine\Assets\Models\bastard_gun\bastard_gun_corob.obj
+TEXTURE D:\Microsoft Visual Studio\Visual Studio Code\DirectX12Engine\Engine\Assets\Models\bastard_gun\bastard_gun_corob.png
+POSITION 0 5 0
+ROTATION -0 0 -0
+SCALE 1 1 1

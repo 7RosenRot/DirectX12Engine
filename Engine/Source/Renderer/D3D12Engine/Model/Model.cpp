@@ -99,6 +99,8 @@ bool D3D12Engine::Model::LoadModel(
   
   // ↓ Set Up Enviromment ↓
   m_IndexCount = static_cast<UINT>(Indices.size());
+  m_Vertices = Vertices;
+  m_Indices  = Indices;
   
   const UINT VertexBufferByteSize = static_cast<UINT>(Vertices.size() * sizeof(Vertex));
   const UINT IndexBufferByteSize = static_cast<UINT>(Indices.size() * sizeof(UINT));

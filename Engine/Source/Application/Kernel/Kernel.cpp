@@ -10,6 +10,7 @@ void Kernel::AppInitialize(
   m_WindowWidth = WindowWidth;
   m_WindowHeight = WindowHeight;
   m_WindowName = WindowName;
+  m_pInstance = this;
 
   m_pWindow = std::make_unique<Window>();
   m_pWindow->SetWindow(hInstance, nCmdShow);
@@ -18,53 +19,45 @@ void Kernel::AppInitialize(
   Input::SetMouseLock(false);
 
   m_pRenderer = std::make_unique<D3D12Engine::DirectX12Graphics>(
-    Window::GetHwnd(), m_WindowWidth, m_WindowHeight
+    Window::GetHwnd(), WindowWidth, WindowHeight
   );
-  
   m_pRendererInstance = m_pRenderer.get();
   
   m_pRenderer->OnInitialize();
-  m_pRenderer->OnResize(m_WindowWidth, m_WindowHeight);
-  m_pRenderer->ResizeViewport(m_WindowWidth, m_WindowHeight);
+  m_pRenderer->OnResize(WindowWidth, WindowHeight);
+  m_pRenderer->ResizeViewport(WindowWidth, WindowHeight);
+
+  m_pAssetManager = std::make_unique<AssetManager>();
+  m_pAssetManager->Initialize(
+    m_pRenderer->GetDevice(),
+    m_pRenderer->GetSrvAllocator(),
+    m_pRenderer->GetContextPool(),
+    m_pRenderer->GetCommandQueue()
+  );
 
   m_pScene = std::make_unique<Scene>();
-  m_pScene->GetActiveCamera().GetTransform().SetPosition(0.0F, 3.5F, -10.0F);
+  m_pScene->Initialize(m_pAssetManager.get());
+  m_pScene->GetActiveCamera().GetTransform().SetPosition(12.5F, 12.5F, -12.5F);
+  m_pScene->GetActiveCamera().GetTransform().SetRotation(20.0F, -45.0F, 0.0F);
 
   m_pEngineUI = std::make_unique<EngineUI>(
     Window::GetHwnd(), m_pRenderer.get(), m_pScene.get()
   );
+  m_pEngineUI->Initialize(
+    m_pRenderer->GetDevice(),
+    m_pRenderer->GetCommandQueueResource(),
+    D3D12Engine::GraphicsCore::FrameCount,
+    D3D12Engine::GraphicsCore::BackBufferFormat,
+    *(m_pRenderer->GetSrvAllocator()),
+    m_pAssetManager.get()
+  );
 
-  // ↓ Load models ↓
-    // ↓ bastard_gun_corpus ↓  
-    auto bastard_gun_corpus_model = m_pRenderer->LoadModel("Engine/Assets/Models/bastard_gun/bastard_gun_corpus.obj");
-    auto bastard_gun_corpus_texture = m_pRenderer->LoadTexture("Engine/Assets/Models/bastard_gun/bastard_gun_corpus.png");
-
-    auto bastard_gun_corpus = std::make_shared<GameObject>(bastard_gun_corpus_model, bastard_gun_corpus_texture, "bastard_gun_corpus");
-    bastard_gun_corpus->GetTransform().SetPosition(0.0F, 0.0F, 0.0F);
-
-    m_pScene->AddGameObject("bastard_gun_corpus", bastard_gun_corpus);
-    // ↑ bastard_gun_corpus ↑
-    
-    // ↓ bastard_gun_corob ↓ 
-    auto bastard_gun_corob_model = m_pRenderer->LoadModel("Engine/Assets/Models/bastard_gun/bastard_gun_corob.obj");
-    auto bastard_gun_corob_texture = m_pRenderer->LoadTexture("Engine/Assets/Models/bastard_gun/bastard_gun_corob.png");
-
-    auto bastard_gun_corob = std::make_shared<GameObject>(bastard_gun_corob_model, bastard_gun_corob_texture, "bastard_gun_corob");
-    bastard_gun_corob->GetTransform().SetPosition(0.0F, 0.0F, 0.0F);
-
-    m_pScene->AddGameObject("bastard_gun_corob", bastard_gun_corob);
-    // ↑ bastard_gun_corob ↑
-  // ↑ Load models ↑
-  
   m_AppRunning = true;
 }
 
 void Kernel::AppRun() {
   MSG msg{};
   ZeroMemory(&msg, sizeof(msg));
-
-  static UINT sceneWidth = m_WindowWidth;
-  static UINT sceneHeight = m_WindowHeight;
 
   while (m_AppRunning) {
     while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
@@ -84,42 +77,52 @@ void Kernel::AppRun() {
       continue;
     }
 
-    if (
-      m_pRenderer != nullptr &&
-      m_pScene    != nullptr &&
-      m_pEngineUI != nullptr
-    ) {
-      m_pEngineUI->UpdateLayout();
-      
-      m_pScene->UpdateScene(0.10F, 0.05F);
-      m_pRenderer->BeginFrame();
-      m_pScene->RenderScene(*m_pRenderer);
-
-      m_pRenderer->BeginUI();
-      
-      m_pEngineUI->NewFrame();
-      m_pEngineUI->Draw();
-      
-      ImGui::Render();
-      m_pRenderer->RenderUI();
-
-      m_pRenderer->EndFrame();
-    }
+    RenderFrame();
   }
 
   AppDestroy();
 }
 
+void Kernel::RenderFrame() {
+  if (
+    m_pRenderer && m_pScene && m_pEngineUI
+  ) {
+    m_pEngineUI->UpdateLayout();
+
+    m_pScene->UpdateScene(0.10F, 0.05F, m_pEngineUI->IsGizmoActive(), m_pEngineUI->GetTathetPoint());
+    
+    m_pRenderer->BeginFrame();
+    
+    m_pScene->RenderScene(*m_pRenderer, m_pEngineUI->GetSelectedObjects());
+    m_pRenderer->PrepareUIContext();
+    
+    m_pEngineUI->BeginUI();
+    m_pEngineUI->DrawUI();
+    m_pEngineUI->EndUI();
+    
+    m_pRenderer->EndFrame();
+  }
+}
+
 void Kernel::AppDestroy() {
-  if (m_pRenderer != nullptr) {
-    m_pRenderer->DestroyUI();
-    
+  if (m_pEngineUI != nullptr) {
     m_pEngineUI.reset();
-    
-    m_pRenderer->OnDestroy();
-    m_pRenderer.reset();
-    m_pRendererInstance = nullptr;
   }
 
-  m_pWindow.reset();
+  if (m_pScene != nullptr) {
+    m_pScene.reset();
+  }
+
+  if (m_pAssetManager != nullptr) {
+    m_pAssetManager.reset();
+  }
+
+  if (m_pRenderer != nullptr) {
+    m_pRenderer->GetCommandQueue()->Flush();
+    m_pRenderer.reset();
+  }
+
+  if (m_pWindow != nullptr) {
+    m_pWindow.reset();
+  }
 }

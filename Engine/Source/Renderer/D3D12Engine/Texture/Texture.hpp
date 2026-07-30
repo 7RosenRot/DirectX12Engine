@@ -9,6 +9,7 @@
 #include <stdexcept>
 
 #include <Renderer/D3D12Engine/Backend/RHI/Core/CommandContext/CommandContext.hpp>
+#include <Renderer/D3D12Engine/Backend/RHI/Core/DescriptorAllocator/DescriptorAllocator.hpp>
 
 namespace D3D12Engine {
   class Texture {
@@ -19,7 +20,17 @@ namespace D3D12Engine {
     bool LoadTexture(
       const std::string& FilePath,
       ID3D12Device* pDevice,
-      CommandContext& rCommandContext
+      CommandContext& rCommandContext,
+      DescriptorAllocator& rSrvAllocator
+    );
+
+    void LoadFromMemory(
+      const void* pData,
+      UINT Width,
+      UINT Height,
+      ID3D12Device* pDevice,
+      D3D12Engine::CommandContext& rUploadContext,
+      DescriptorAllocator& rSrvAllocator
     );
 
     void Bind(
@@ -30,9 +41,13 @@ namespace D3D12Engine {
     ID3D12Resource* GetResource() {
       return m_Texture.Get();
     }
+
+    D3D12_GPU_DESCRIPTOR_HANDLE GetSrvHandle() const { 
+    return m_SrvAllocation.GPU; 
+  }
    private:
     Microsoft::WRL::ComPtr<ID3D12Resource> m_Texture;
     Microsoft::WRL::ComPtr<ID3D12Resource> m_UploadHeap;
-    Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_srvHeap;
+    DescriptorAllocation m_SrvAllocation;
   };
 }

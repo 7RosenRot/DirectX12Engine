@@ -19,6 +19,10 @@ class Input {
   static void GetMouseDelta(float& outDx, float& outDy);
   static void SetMouseLock(bool lock);
   static bool IsMouseLocked() { return m_MouseLocker; }
+  static void SetMmbMode(bool active) { m_MmbMode = active; }
+  static bool IsMmbMode() { return m_MmbMode; }
+  static void SetMouseWheelDelta(float delta) { m_MouseWheelDelta += delta; }
+  static float GetMouseWheelDelta();
   // ↑ Mouse ↑
  private:
   // ↓ Keyboard ↓
@@ -28,7 +32,11 @@ class Input {
   
   // ↓ Mouse ↓
   static bool  m_MouseLocker;
+  static bool  m_MmbMode;
+  static bool  m_IgnoreNextMouseMove;
+  
   static float m_MouseDeltaX;
   static float m_MouseDeltaY;
+  static float m_MouseWheelDelta;
   // ↑ Mouse ↑
 };

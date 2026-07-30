@@ -102,10 +102,20 @@ void Transform::RotateY(float angle) {
 }
 
 XMMATRIX Transform::GetMatrixView() {
+  XMVECTOR Position = XMLoadFloat3(&m_Position);
+
+  if (m_Rotation.x != m_LastRotation.x || m_Rotation.y != m_LastRotation.y || m_Rotation.z != m_LastRotation.z) {
+    XMMATRIX R = XMMatrixRotationRollPitchYaw(m_Rotation.x, m_Rotation.y, m_Rotation.z);
+    XMStoreFloat3(&m_Look, XMVector3TransformNormal(XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f), R));
+    XMStoreFloat3(&m_Right, XMVector3TransformNormal(XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f), R));
+    XMStoreFloat3(&m_Up, XMVector3TransformNormal(XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), R));
+    m_PitchAngle = m_Rotation.x;
+    m_LastRotation = m_Rotation;
+  }
+
   XMVECTOR Right = XMLoadFloat3(&m_Right);
   XMVECTOR Up = XMLoadFloat3(&m_Up);
   XMVECTOR Look = XMLoadFloat3(&m_Look);
-  XMVECTOR Position = XMLoadFloat3(&m_Position);
 
   Look = XMVector3Normalize(Look);
   Up = XMVector3Normalize(XMVector3Cross(Look, Right));
@@ -129,17 +139,37 @@ XMMATRIX Transform::GetMatrixView() {
 }
 
 XMMATRIX Transform::GetMatrixModel() {
-  DirectX::XMMATRIX Model;
+  XMMATRIX S = XMMatrixScaling(m_Scale.x, m_Scale.y, m_Scale.z);
+  XMMATRIX R = XMMatrixRotationRollPitchYaw(m_Rotation.x, m_Rotation.y, m_Rotation.z);
+  XMMATRIX T = XMMatrixTranslation(m_Position.x, m_Position.y, m_Position.z);
 
-  Model.r[0] = DirectX::XMLoadFloat3(&m_Right);
-  Model.r[1] = DirectX::XMLoadFloat3(&m_Up);
-  Model.r[2] = DirectX::XMLoadFloat3(&m_Look);
-  Model.r[3] = DirectX::XMLoadFloat3(&m_Position);
+  return S * R * T;
+}
 
-  Model.r[0] = DirectX::XMVectorSetW(Model.r[0], 0.0F);
-  Model.r[1] = DirectX::XMVectorSetW(Model.r[1], 0.0F);
-  Model.r[2] = DirectX::XMVectorSetW(Model.r[2], 0.0F);
-  Model.r[3] = DirectX::XMVectorSetW(Model.r[3], 1.0F);
+void Transform::Orbit(FXMVECTOR Target, float PitchAngle, float YawAngle) {
+  XMVECTOR Pos = XMLoadFloat3(&m_Position);
+  XMVECTOR V = XMVectorSubtract(Pos, Target);
 
-  return Model;
+  const float maxPitch = 0.99f * XM_PIDIV2;
+  float newPitch = m_PitchAngle + PitchAngle;
+  newPitch = std::clamp(newPitch, -maxPitch, maxPitch);
+  float allowedPitchAngle = newPitch - m_PitchAngle;
+  m_PitchAngle = newPitch;
+
+  if (allowedPitchAngle != 0.0f) {
+    XMMATRIX rotX = XMMatrixRotationAxis(XMLoadFloat3(&m_Right), allowedPitchAngle);
+    XMStoreFloat3(&m_Up, XMVector3TransformNormal(XMLoadFloat3(&m_Up), rotX));
+    XMStoreFloat3(&m_Look, XMVector3TransformNormal(XMLoadFloat3(&m_Look), rotX));
+    V = XMVector3TransformCoord(V, rotX);
+  }
+
+  if (YawAngle != 0.0f) {
+    XMMATRIX rotY = XMMatrixRotationY(YawAngle);
+    XMStoreFloat3(&m_Right, XMVector3TransformNormal(XMLoadFloat3(&m_Right), rotY));
+    XMStoreFloat3(&m_Up, XMVector3TransformNormal(XMLoadFloat3(&m_Up), rotY));
+    XMStoreFloat3(&m_Look, XMVector3TransformNormal(XMLoadFloat3(&m_Look), rotY));
+    V = XMVector3TransformCoord(V, rotY);
+  }
+
+  XMStoreFloat3(&m_Position, XMVectorAdd(Target, V));
 }

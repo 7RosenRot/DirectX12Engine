@@ -20,20 +20,23 @@ class Camera {
   // ↑ Setters ↑
   
   // ↓ Input processing ↓
-  void InputProcessing(const float MovementSpeed, const float MouseSensivity);
+  void InputProcessing(const float MovementSpeed, const float MouseSensivity, const DirectX::XMFLOAT3& TargetPoint = { 0.0f, 0.0f, 0.0f });
   // ↑ Input processing ↑
 
   // ↓ Getters ↓
-  Transform& GetTransform() {
-    return m_Transform;
-  }
-  
-  XMMATRIX GetMatrixProjection() const {
-    return m_MatrixProjection;
-  }
+  Transform& GetTransform() { return m_Transform; }
+
+  XMMATRIX GetMatrixProjection() const { return m_MatrixProjection; }
+  XMMATRIX GetMatrixView()       const { return m_MatrixView; }
+
+  const DirectX::XMFLOAT3& GetOrbitTarget() const { return m_OrbitTarget; }
+  void SetOrbitTarget(const DirectX::XMFLOAT3& target) { m_OrbitTarget = target; }
   // ↑ Getters ↑
  private:
   Transform m_Transform;
 
+  DirectX::XMFLOAT3 m_OrbitTarget{0.0f, 0.0f, 0.0f};
+
   XMMATRIX m_MatrixProjection = XMMatrixIdentity();
+  XMMATRIX m_MatrixView = m_Transform.GetMatrixView();
 };

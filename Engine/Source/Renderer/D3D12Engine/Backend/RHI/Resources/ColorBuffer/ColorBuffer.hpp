@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <Renderer/D3D12Engine/Backend/RHI/Core/DescriptorAllocator/DescriptorAllocator.hpp>
 #include <Renderer/D3D12Engine/Backend/RHI/Resources/GpuResource/GpuResource.hpp>
 
 namespace D3D12Engine {
@@ -9,47 +10,37 @@ namespace D3D12Engine {
     ColorBuffer() = default;
     ~ColorBuffer() = default;
 
-    void CreateScene(
+    bool Initialize(
       ID3D12Device* pDevice,
       const std::wstring& SceneName,
       UINT SceneWidth,
       UINT SceneHeight,
+      DescriptorAllocator& RtvAllocator,
+      DescriptorAllocator& SrvAllocator,
       DXGI_FORMAT Format = DXGI_FORMAT_R8G8B8A8_UNORM
     );
 
+    void Shutdown(
+      DescriptorAllocator& RtvAllocator,
+      DescriptorAllocator& SrvAllocator
+    );
+
     // ↓ Getters ↓
-    DXGI_FORMAT GetFormat() {
-      return m_Format;
-    }
-
-    D3D12_CPU_DESCRIPTOR_HANDLE GetRTV() const {
-      return m_RtvHandle;
-    }
-
-    D3D12_CPU_DESCRIPTOR_HANDLE GetSRV() const {
-      return m_SrvHandle;
-    }
-
-    D3D12_GPU_DESCRIPTOR_HANDLE GetSRVGpuHandle() const {
-      return m_SrvHeap->GetGPUDescriptorHandleForHeapStart();
-    }
-
-    ID3D12DescriptorHeap* GetSRVHeap() const {
-      return m_SrvHeap.Get();
-    }
+    DXGI_FORMAT GetFormat()                       const { return m_Format; }
+    D3D12_CPU_DESCRIPTOR_HANDLE GetRTVCpuHandle() const { return m_RtvAllocation.CPU; }
+    D3D12_CPU_DESCRIPTOR_HANDLE GetSRVCpuHandle() const { return m_SrvAllocation.CPU; }
+    D3D12_GPU_DESCRIPTOR_HANDLE GetSRVGpuHandle() const { return m_SrvAllocation.GPU; }
     // ↑ Getters ↑
 
    private:
     DXGI_FORMAT m_Format;
 
     // ↓ Scene RTT ↓
-    Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_RtvHeap;
-    D3D12_CPU_DESCRIPTOR_HANDLE m_RtvHandle{};
+    DescriptorAllocation m_RtvAllocation;
     // ↑ Scene RTT ↑
 
     // ↓ ImGui RTT ↓
-    Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_SrvHeap;
-    D3D12_CPU_DESCRIPTOR_HANDLE m_SrvHandle{};
+    DescriptorAllocation m_SrvAllocation;
     // ↑ ImGui RTT ↑
   };
 }

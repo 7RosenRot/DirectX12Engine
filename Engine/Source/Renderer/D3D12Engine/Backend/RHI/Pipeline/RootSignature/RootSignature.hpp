@@ -35,6 +35,12 @@ namespace D3D12Engine {
     RootSignature() = default;
     ~RootSignature() = default;
 
+    void Shutdown() {
+      if (m_RootSignature) {
+        m_RootSignature.Reset();
+      }
+    }
+
     void Reset(UINT numParams, UINT numSamplers = 0);
     void Finalize(ID3D12Device* pDevice, D3D12_ROOT_SIGNATURE_FLAGS flags);
 

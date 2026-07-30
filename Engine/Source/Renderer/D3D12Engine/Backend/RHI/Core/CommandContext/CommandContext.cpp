@@ -44,7 +44,7 @@ void D3D12Engine::CommandContext::ClearColor(ColorBuffer& Target, const float* C
   TransitionResource(Target, D3D12_RESOURCE_STATE_RENDER_TARGET);
   FlushResourceBarriers();
 
-  m_cmdList->ClearRenderTargetView(Target.GetRTV(), ClearColor, 0, nullptr);
+  m_cmdList->ClearRenderTargetView(Target.GetRTVCpuHandle(), ClearColor, 0, nullptr);
 }
 
 void D3D12Engine::CommandContext::ClearDepth(DepthBuffer& Target) {

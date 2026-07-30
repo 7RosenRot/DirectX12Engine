@@ -37,6 +37,8 @@ namespace D3D12Engine {
     ID3D12GraphicsCommandList* GetCommandList() const {
       return m_cmdList.Get();
     }
+    void SetFenceValue(UINT64 fenceValue) { m_fenceValue = fenceValue; }
+    UINT64 GetFenceValue() const { return m_fenceValue; }
     // ↑ Getters ↑
     
     // ↓ Setters ↓
@@ -66,6 +68,8 @@ namespace D3D12Engine {
     
     // ↓ Extended to process 3D models ↓
     std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> m_TempUploadBuffers;
+
+    UINT64 m_fenceValue = 0;
   };
 
   inline void CommandContext::Reset() {
@@ -74,6 +78,7 @@ namespace D3D12Engine {
     m_cmdList->Reset(m_cmdAllocator.Get(), nullptr);
 
     m_ResourceBarrierBuffer.clear();
+    m_TempUploadBuffers.clear();
   }
 
   inline void CommandContext::Close() {
@@ -114,7 +119,7 @@ namespace D3D12Engine {
   }
 
   inline void CommandContext::SetRenderTargets(ColorBuffer& rtv, DepthBuffer& dsv) {
-    D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = rtv.GetRTV();
+    D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = rtv.GetRTVCpuHandle();
     D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = dsv.GetDSV();
 
     m_cmdList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);

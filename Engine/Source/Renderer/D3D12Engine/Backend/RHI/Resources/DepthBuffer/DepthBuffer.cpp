@@ -2,19 +2,26 @@
 
 #include <Renderer/D3D12Engine/Backend/RHI/Resources/DepthBuffer/DepthBuffer.hpp>
 
-void D3D12Engine::DepthBuffer::Create(ID3D12Device* device, const std::wstring& name, UINT width, UINT height, DXGI_FORMAT format) {
+D3D12Engine::DepthBuffer::DepthBuffer(
+  float clearDepth,
+  UINT8 clearStencil
+) :
+  m_Format(DXGI_FORMAT_UNKNOWN),
+  m_ClearDepth(clearDepth),
+  m_ClearStencil(clearStencil)
+{}
+
+void D3D12Engine::DepthBuffer::Create(
+  ID3D12Device* device,
+  const std::wstring& name,
+  UINT width,
+  UINT height,
+  DescriptorAllocator& DsvAllocator,
+  DXGI_FORMAT format
+) {
   m_Format = format;
 
-  D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc = {};
-  dsvHeapDesc.NumDescriptors = 1;
-  dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
-  dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-  
-  if (FAILED(device->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(&m_DSVHeap)))) {
-    throw std::runtime_error("Failed to create DSV Descriptor Heap");
-  }
-  
-  m_DSVHandle = m_DSVHeap->GetCPUDescriptorHandleForHeapStart();
+  m_DsvAllocation = DsvAllocator.Allocate();
 
   D3D12_CLEAR_VALUE clearValue = { format, 1.0f, 0 };
   
@@ -41,5 +48,13 @@ void D3D12Engine::DepthBuffer::Create(ID3D12Device* device, const std::wstring& 
   dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
   dsvDesc.Flags = D3D12_DSV_FLAG_NONE;
 
-  device->CreateDepthStencilView(m_pResource.Get(), &dsvDesc, m_DSVHandle);
+  device->CreateDepthStencilView(m_pResource.Get(), &dsvDesc, m_DsvAllocation.CPU);
+}
+
+void D3D12Engine::DepthBuffer::Shutdown(DescriptorAllocator& DsvAllocator) {
+  if (m_DsvAllocation.IsValid()) {
+    DsvAllocator.Free(m_DsvAllocation);
+  }
+
+  GpuResource::Shutdown();
 }
