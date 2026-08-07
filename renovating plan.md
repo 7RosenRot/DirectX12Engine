@@ -23,7 +23,7 @@ Engine/
 │
 ├── Framework/
 │   │
-│   ├── Assets/
+│   ├── AssetManager/
 │   │   ├── IResourceLoader.hpp *(interface)*
 │   │   ├── Loaders/
 │   │   │   ├── ObjLoader      *(class)*
@@ -65,7 +65,7 @@ Engine/
 │   ├── IRenderer.hpp
 │   ├── ICommandContext.hpp
 │   └── Backend/
-│       ├── D3D12/             
+│       ├── D3D12/
 │       │   ├── D3D12Renderer.cpp
 │       │   ├── D3D12Model.cpp
 │       │   ├── D3D12Texture.cpp
@@ -99,7 +99,7 @@ Engine/
 
 2. *Обход ресурсов*
 2. 1. AssetManger хранит `std::unordered_map<std::string, uint32_t>` - список уже загруженных ресурсов `<"/path/to/(.obj, .fbx, .png, ...)", ID>`.
-2. 2. Если есть такой ресурс - AssetManager тут же вернет его ID, что позволит быстро вызвать ресурс из памяти.
+2. 2. Если есть такой ресурс - AssetManager тут же вернет его ID, что позволит быстро вызвать ресурс из памяти.s
 2. 3. Если такого ресурса пока нет - AssetManger должен загрузить его.
 
 3. *Вызов загрузчика ресурса*
@@ -116,6 +116,93 @@ Engine/
 5. *Возврат изапись ресурса в реестр*
 5. 1. Сам метод LoadResource() возвращает либо `std::shared_ptr<IMesh>`, либо `std::shared_ptr<IMaterial>`, либо другой тип, если необходимо.
 5. 2. AssetManager записывает полученный ресурс в `std::unordered_map<path, ID>` и добавляет его `в ResourceRegistry<IMesh>`
+
+Хорошо, еще раз сверим пайплайн загрузки и работы с ассетами:
+--- Слой UI/
+1. Обработка "Import", вызов `m_pAssetManger->UploadResource(path);`
+
+--- Слой AssetManger/
+Система хранения выглядит как:
+```C++
+  // хранит список поддерживаемых расширений
+  enum class ResourceType : uint32_t { Mesh, Texture, Audio, Animation, Unknown };
+  // структура для быстрого доступа к ресурсам
+  struct ResourceDesc {
+    ResourceType Type = ResourceType::Unknown;
+    uint32_t Index = -1;
+  };
+  // мапа для быстрого доступа к нужному элементу по пути
+  std::unordered_map<std::string, ResourceDesc> ResourceMap;
+  // вектор всех когда-либо загруженных ассетов
+  std::vector<std::shared_ptr<IMesh>> m_pMeshes;
+  std::vector<std::shared_ptr<ITextrue>> m_pTextures;
+```
+
+Как это работает?
+
+*Внутри `uint32_t UploadResource(std::string Path) {...}`* 
+1. Проверяем `std::unordered_map<Path, Index> ResourceMap`
+1. 1. Запись есть - вернуть Index (сигнал успеха)
+```C++
+  if (ResourceMap.contains(Path)) {
+    return ResourceMap[Path].Index;
+  }
+```
+1. 2. Записи нет - идем дальше
+
+2. Загрузка ресурса
+2. 1. Вычленяем расширение
+```C++
+  std::string FileExtension = std::filesystem::path(path).extension().string();
+```
+2. 2. Определяем загручик и выполняем загрузку
+```C++
+  // *Алгоритм загрузки* //
+  std::shared_ptr<IResource> pResource;
+  
+  for (const auto& ResourceLoader : m_pResourceLoaders) {
+    if (ResourceLoader->GetPattern() == FileExtension) {
+      pResource = ResourceLoader->LoadResource(Path);
+    }
+  }
+```
+
+3. Записываем ресрурс в реестр
+```C++
+  ResourceDesc newResource = {};
+  
+  if (FileExtension == "obj") {
+    std::shared_ptr<IMesh> pMesh = std::static_pointer_cast<pResource>;
+
+    m_pMeshes.push_back(pMesh);
+
+    uint32_t Index = static_cast<uint32_t>(m_pMeshes.size() - 1);
+
+    newResource = { ResourceType::Mesh, Index };
+
+    ResourceMap.emplace(Path, newResource);
+    
+    return newResource;
+  }
+
+  if (FileExtension == "png") {...}
+
+  if (...) {...}
+
+  return -1;
+```
+
+--- Слой AssetManger/Loaders
+4. Загружаем ресурс
+4. 1. Внтури метода `LoadResource()` мы только читаем файл и переводим данные либо в массив вершин, либо в матрицу текстуры и так далее в ОЗУ. Однако, классы (ObjLoader/PngLoader/FbxLoader/...) полностью изолированы от API и не должны знать о низком уровне.
+4. 2. Внутри метода `LoadResource()` идет обращение через `IRenderer->CreateMesh(Verticies)` (метод из D3D12/VK3DMesh)
+--- Слой Renderer
+4. 3. Сам метод CreateMesh() при этом имеет тип возвращаемого значения `std::shared_ptr<IMesh> CreateMesh(...)`
+4. 4. Виртуальный класс IMesh соджержит методы, необходимые для доступа к загруженным данным, так например `virtual uint32_t GetVertexCount() const = 0;` и `virtual uint32_t GetIndexCount() const = 0;`, а сами же эти методы реализованы внутри D3D12Mesh или VK3DMesh как `uint32_t GetIndexCount() const override { return m_IndexCount; }` и `uint32_t GetVertexCount() const override { return m_VertexCount; }`
+
+--- Слой AssetManger/Loaders
+5. Возврат изапись ресурса в реестр
+5. 1. Сам метод LoadResource() возвращает либо `std::shared_ptr<IMesh>`, либо `std::shared_ptr<IMaterial>`, либо другой тип, если необходимо.
 
 #### ECS
 #### UI
