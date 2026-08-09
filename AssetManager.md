@@ -49,6 +49,12 @@
     ResourceType Type = ResourceType::Unknown;
     uint32_t Index = -1;
   };
+
+  // ↓ Указатель на используемый рендерер D3D12/VK3D ↓
+  std::shared_ptr<IRenderer> m_pRenderer;
+
+  // ↓ Список реализованных загрузчиков ↓
+  std::vector<std::shared_ptr<IResourceLoader>> m_pResourceLoaders;
   
   // ↓ Мапа для доступа через Path ↓
   std::unordered_map<std::string, ResourceDesc> ResourceMap;
@@ -72,11 +78,17 @@
   };
 ```
 ## Logic
-### *Вызов AssetManger*
-1. Активация AssetManager при старте программы.
+### *Инициализация AssetManger*
 ```C++
-  m_pAssetManger->Initialize();
+  m_pAssetManger->Initialize(m_pRenderer.get());
 ```
+
+Внутри `void Initialize(const std::shared_ptr<IRenderer> pRenderer) {...}`
+
+```C++
+  m_pRenderer = pRenderer;
+```
+
 2. Подключение AssetManager в класс для использования.
 ```C++
   #include <AssetManager>
